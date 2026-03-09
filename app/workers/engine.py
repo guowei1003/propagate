@@ -153,6 +153,16 @@ class WorkerEngine:
                         attempt + 1,
                         {"reason": review.summary},
                     )
+                    blocked_ids = self.subtasks.mark_dependents_blocked(subtask_id)
+                    if blocked_ids:
+                        event_service.publish(
+                            task["id"],
+                            "subtask.dependents.blocked",
+                            f"{len(blocked_ids)} subtasks blocked by failed dependency.",
+                            level="warn",
+                            sub_task_id=subtask_id,
+                            payload={"blocked_ids": blocked_ids},
+                        )
                     event_service.publish(
                         task["id"],
                         "subtask.review.failed",
@@ -190,6 +200,16 @@ class WorkerEngine:
                         attempt + 1,
                         {"reason": test_result.summary},
                     )
+                    blocked_ids = self.subtasks.mark_dependents_blocked(subtask_id)
+                    if blocked_ids:
+                        event_service.publish(
+                            task["id"],
+                            "subtask.dependents.blocked",
+                            f"{len(blocked_ids)} subtasks blocked by failed dependency.",
+                            level="warn",
+                            sub_task_id=subtask_id,
+                            payload={"blocked_ids": blocked_ids},
+                        )
                     event_service.publish(
                         task["id"],
                         "subtask.test.failed",

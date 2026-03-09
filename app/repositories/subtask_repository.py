@@ -130,14 +130,15 @@ class SubTaskRepository:
             )
 
     def mark_retry_pending(self, subtask_id: str, retry_count: int) -> None:
+        """Mark subtask as READY for retry (was RETRY_PENDING, now unified with normal flow)."""
         with transaction() as conn:
             conn.execute(
                 """
                 UPDATE sub_tasks
-                SET status = 'RETRY_PENDING', retry_count = ?, updated_at = ?
+                SET status = ?, retry_count = ?, updated_at = ?
                 WHERE id = ?
                 """,
-                (retry_count, utcnow(), subtask_id),
+                (SUBTASK_STATUS_READY, retry_count, utcnow(), subtask_id),
             )
 
     def mark_completed(self, subtask_id: str, output_summary: dict) -> None:
@@ -171,6 +172,32 @@ class SubTaskRepository:
                 (retry_count, dumps_json(summary), utcnow(), subtask_id),
             )
 
+    def mark_dependents_blocked(self, subtask_id: str) -> list[str]:
+        """Mark all pending subtasks that depend on this one as BLOCKED_BY_DEPENDENCY."""
+        with transaction() as conn:
+            # Find all subtasks that depend on this one
+            rows = conn.execute(
+                """
+                SELECT to_sub_task_id
+                FROM sub_task_dependencies
+                WHERE from_sub_task_id = ?
+                """,
+                (subtask_id,),
+            ).fetchall()
+            blocked_ids = [row["to_sub_task_id"] for row in rows]
+            if not blocked_ids:
+                return []
+            # Mark them as blocked if they are still PENDING
+            conn.execute(
+                """
+                UPDATE sub_tasks
+                SET status = 'BLOCKED_BY_DEPENDENCY', updated_at = ?
+                WHERE id IN ({}) AND status = ?
+                """.format(",".join("?" * len(blocked_ids))),
+                (utcnow(), *blocked_ids, SUBTASK_STATUS_PENDING),
+            )
+        return blocked_ids
+
     def update_output_summary(self, subtask_id: str, output_summary: dict) -> None:
         with transaction() as conn:
             conn.execute(
@@ -189,7 +216,7 @@ class SubTaskRepository:
                     """
                     SELECT *
                     FROM sub_tasks
-                    WHERE status IN (?, 'RETRY_PENDING')
+                    WHERE status = ?
                     ORDER BY priority ASC, sequence_no ASC, created_at ASC
                     LIMIT ?
                     """,

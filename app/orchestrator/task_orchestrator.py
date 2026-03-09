@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import uuid
 
 from app.agents.reporter import report_agent
@@ -9,6 +10,7 @@ from app.agents.task_evaluator import task_evaluator_agent
 from app.enums import (
     SUBTASK_STATUS_COMPLETED,
     SUBTASK_STATUS_PENDING,
+    SUBTASK_TERMINAL_STATUSES,
     TASK_PHASE_DONE,
     TASK_PHASE_REPORTING,
     TASK_PHASE_REQUIREMENT_ANALYZING,
@@ -28,6 +30,19 @@ from app.repositories.subtask_repository import SubTaskRepository
 from app.repositories.task_repository import TaskRepository
 from app.services.artifact_service import artifact_service
 from app.services.event_service import event_service
+
+
+# Per-task locks to prevent concurrent finalize operations
+_task_locks: dict[str, threading.Lock] = {}
+_task_locks_mutex = threading.Lock()
+
+
+def _get_task_lock(task_id: str) -> threading.Lock:
+    """Get or create a lock for a specific task."""
+    with _task_locks_mutex:
+        if task_id not in _task_locks:
+            _task_locks[task_id] = threading.Lock()
+        return _task_locks[task_id]
 
 
 class TaskOrchestrator:
@@ -161,38 +176,49 @@ class TaskOrchestrator:
         self.tasks.update_task(task_id, progress_percent=progress)
 
     def finalize_task_if_done(self, task_id: str) -> None:
-        task = self.tasks.get_task(task_id)
-        requirement = self.requirements.get_latest(task_id)
-        subtasks = self.subtasks.list_by_task(task_id)
-        if not task or not requirement or not subtasks:
+        """Check if all subtasks are done and generate final report. Thread-safe."""
+        lock = _get_task_lock(task_id)
+        if not lock.acquire(blocking=False):
+            # Another thread is already processing this task
             return
-        terminal = all(item["status"] in {"COMPLETED", "NEEDS_HUMAN_REVIEW"} for item in subtasks)
-        if not terminal:
-            self.refresh_ready_subtasks(task_id)
-            return
-        self.tasks.update_task(task_id, current_phase=TASK_PHASE_REPORTING, progress_percent=self.subtasks.get_task_progress(task_id))
-        events = self.events.list_by_task(task_id, limit=1000)
-        env_profile = self.env_profiles.get_profile_for_runtime(task["env_profile_id"])
-        markdown, summary = report_agent.run(task, requirement, subtasks, events, env_profile)
-        self.reports.save_report(task_id, markdown, summary)
-        artifact_service.save_text_artifact(
-            task_id=task_id,
-            sub_task_id=None,
-            artifact_type="report",
-            filename="final-report.md",
-            content=markdown,
-            summary="Final task report",
-            metadata=summary,
-        )
-        status = TASK_STATUS_COMPLETED if all(item["status"] == "COMPLETED" for item in subtasks) else TASK_STATUS_PARTIAL_SUCCESS
-        self.tasks.update_task(
-            task_id,
-            status=status,
-            current_phase=TASK_PHASE_DONE,
-            progress_percent=self.subtasks.get_task_progress(task_id),
-            completed=True,
-        )
-        event_service.publish(task_id, "task.report.generated", "Final report generated.")
+        try:
+            task = self.tasks.get_task(task_id)
+            requirement = self.requirements.get_latest(task_id)
+            subtasks = self.subtasks.list_by_task(task_id)
+            if not task or not requirement or not subtasks:
+                return
+            # Check if task is already completed
+            if task.get("completed"):
+                return
+            terminal = all(item["status"] in SUBTASK_TERMINAL_STATUSES for item in subtasks)
+            if not terminal:
+                self.refresh_ready_subtasks(task_id)
+                return
+            self.tasks.update_task(task_id, current_phase=TASK_PHASE_REPORTING, progress_percent=self.subtasks.get_task_progress(task_id))
+            events = self.events.list_by_task(task_id, limit=1000)
+            env_profile = self.env_profiles.get_profile_for_runtime(task["env_profile_id"])
+            markdown, summary = report_agent.run(task, requirement, subtasks, events, env_profile)
+            self.reports.save_report(task_id, markdown, summary)
+            artifact_service.save_text_artifact(
+                task_id=task_id,
+                sub_task_id=None,
+                artifact_type="report",
+                filename="final-report.md",
+                content=markdown,
+                summary="Final task report",
+                metadata=summary,
+            )
+            status = TASK_STATUS_COMPLETED if all(item["status"] == "COMPLETED" for item in subtasks) else TASK_STATUS_PARTIAL_SUCCESS
+            self.tasks.update_task(
+                task_id,
+                status=status,
+                current_phase=TASK_PHASE_DONE,
+                progress_percent=self.subtasks.get_task_progress(task_id),
+                completed=True,
+            )
+            event_service.publish(task_id, "task.report.generated", "Final report generated.")
+        finally:
+            lock.release()
 
 
 task_orchestrator = TaskOrchestrator()

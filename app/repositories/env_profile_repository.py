@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 
+from app.config import settings
 from app.db import transaction
 from app.repositories.common import row_to_dict, utcnow
 
@@ -111,20 +112,41 @@ class EnvProfileRepository:
         return profile_id
 
     def seed_default_profile(self) -> None:
+        """Create default profile from environment variables or demo mode."""
         if self.get_default_profile():
             return
-        self.create_profile(
-            name="Default",
-            provider_type="demo",
-            api_base_url="",
-            api_key="",
-            default_model="demo-heuristic",
-            review_model="demo-review",
-            test_model="demo-test",
-            temperature=0.2,
-            max_concurrency=2,
-            default_timeout_sec=300,
-            max_retries=2,
-            enable_auto_sub_agents=True,
-            enable_docker_sandbox=False,
-        )
+        # Use environment variables if configured
+        llm_config = settings.llm
+        if llm_config.provider_type != "demo" and llm_config.api_base_url and llm_config.api_key:
+            self.create_profile(
+                name="Default (from env)",
+                provider_type=llm_config.provider_type,
+                api_base_url=llm_config.api_base_url,
+                api_key=llm_config.api_key,
+                default_model=llm_config.default_model,
+                review_model=llm_config.review_model or llm_config.default_model,
+                test_model=llm_config.test_model or llm_config.default_model,
+                temperature=llm_config.temperature,
+                max_concurrency=2,
+                default_timeout_sec=llm_config.timeout_sec,
+                max_retries=llm_config.max_retries,
+                enable_auto_sub_agents=True,
+                enable_docker_sandbox=False,
+            )
+        else:
+            # Fallback to demo mode
+            self.create_profile(
+                name="Default",
+                provider_type="demo",
+                api_base_url="",
+                api_key="",
+                default_model="demo-heuristic",
+                review_model="demo-review",
+                test_model="demo-test",
+                temperature=0.2,
+                max_concurrency=2,
+                default_timeout_sec=300,
+                max_retries=2,
+                enable_auto_sub_agents=True,
+                enable_docker_sandbox=False,
+            )
