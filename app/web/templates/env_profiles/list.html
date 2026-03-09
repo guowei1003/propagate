@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Environment Profiles</p>
+    <h1>环境配置</h1>
+    <p class="muted">配置模型、OpenAI 兼容接口、超时、并发和自动子 Agent 开关。</p>
+  </div>
+</section>
+
+<section class="grid two">
+  <div class="panel">
+    <h2>新增配置</h2>
+    <form method="post" action="/env-profiles" class="form">
+      <label><span>名称</span><input type="text" name="name" required /></label>
+      <label>
+        <span>提供方模式</span>
+        <select name="provider_type" required>
+          <option value="demo">demo</option>
+          <option value="openai_compatible">openai_compatible</option>
+        </select>
+      </label>
+      <label><span>API Base URL</span><input type="text" name="api_base_url" placeholder="https://your-host/v1" /></label>
+      <label><span>API Key</span><input type="password" name="api_key" placeholder="sk-..." /></label>
+      <label><span>默认模型</span><input type="text" name="default_model" value="demo-heuristic" required /></label>
+      <label><span>Review 模型</span><input type="text" name="review_model" value="demo-review" required /></label>
+      <label><span>Test 模型</span><input type="text" name="test_model" value="demo-test" required /></label>
+      <label><span>温度</span><input type="number" step="0.1" min="0" max="2" name="temperature" value="0.2" required /></label>
+      <label><span>最大并发</span><input type="number" name="max_concurrency" value="2" min="1" required /></label>
+      <label><span>默认超时(秒)</span><input type="number" name="default_timeout_sec" value="300" min="30" required /></label>
+      <label><span>最大重试次数</span><input type="number" name="max_retries" value="2" min="0" required /></label>
+      <label class="checkbox"><input type="checkbox" name="enable_auto_sub_agents" checked /> 启用动态子 Agent</label>
+      <label class="checkbox"><input type="checkbox" name="enable_docker_sandbox" /> 启用 Docker 沙箱</label>
+      <button type="submit">保存配置</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>已有配置</h2>
+    <div class="task-list">
+      {% for profile in env_profiles %}
+      <div class="task-card">
+        <div class="task-card-header">
+          <strong>{{ profile.name }}</strong>
+          <span class="badge">{{ profile.default_model }}</span>
+        </div>
+        <div class="task-card-body">
+          <div class="meta">
+            <span>模式：{{ profile.provider_type }}</span>
+            <span>并发：{{ profile.max_concurrency }}</span>
+            <span>超时：{{ profile.default_timeout_sec }}s</span>
+            <span>重试：{{ profile.max_retries }}</span>
+          </div>
+          {% if profile.api_base_url %}
+          <p class="muted">Base URL: {{ profile.api_base_url }}</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

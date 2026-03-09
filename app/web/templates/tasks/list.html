@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">AI Task Execution System</p>
+    <h1>任务中心</h1>
+    <p class="muted">创建任务后，系统会自动进行需求解析、澄清、拆解、执行、Review/Test 和报告生成。</p>
+  </div>
+</section>
+
+<section class="grid two">
+  <div class="panel">
+    <h2>新建任务</h2>
+    <form method="post" action="/tasks" class="form">
+      <label>
+        <span>任务标题</span>
+        <input type="text" name="title" placeholder="例如：实现一套 AI 任务执行平台" required />
+      </label>
+      <label>
+        <span>任务提示词</span>
+        <textarea name="prompt" rows="8" placeholder="描述任务目标、范围、关键功能与约束。" required></textarea>
+      </label>
+      <label>
+        <span>环境配置</span>
+        <select name="env_profile_id" required>
+          {% for profile in env_profiles %}
+          <option value="{{ profile.id }}">{{ profile.name }} / {{ profile.default_model }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">创建任务</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>任务列表</h2>
+    {% if tasks %}
+    <div class="task-list">
+      {% for task in tasks %}
+      <a class="task-card" href="/tasks/{{ task.id }}">
+        <div class="task-card-header">
+          <strong>{{ task.title }}</strong>
+          <span class="badge">{{ task.status }}</span>
+        </div>
+        <div class="task-card-body">
+          <p>{{ task.prompt[:120] }}{% if task.prompt|length > 120 %}...{% endif %}</p>
+          <div class="meta">
+            <span>阶段：{{ task.current_phase }}</span>
+            <span>进度：{{ task.progress_percent }}%</span>
+            <span>子任务：{{ task.completed_subtask_count }}/{{ task.subtask_count }}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">还没有任务，先创建一个。</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
