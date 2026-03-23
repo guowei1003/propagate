@@ -233,6 +233,33 @@ class SubTaskRepository:
                     results.append(self._inflate(item))
         return results
 
+    def list_ready(self, limit: int) -> list[dict]:
+        with transaction() as conn:
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM sub_tasks
+                WHERE status = ?
+                ORDER BY priority ASC, sequence_no ASC, created_at ASC
+                LIMIT ?
+                """,
+                (SUBTASK_STATUS_READY, limit),
+            ).fetchall()
+        return [self._inflate(row_to_dict(row)) for row in rows]
+
+    def claim_specific(self, subtask_id: str) -> bool:
+        with _claim_lock:
+            with transaction() as conn:
+                cursor = conn.execute(
+                    """
+                    UPDATE sub_tasks
+                    SET status = ?, updated_at = ?
+                    WHERE id = ? AND status = ?
+                    """,
+                    (SUBTASK_STATUS_RUNNING, utcnow(), subtask_id, SUBTASK_STATUS_READY),
+                )
+        return int(cursor.rowcount or 0) == 1
+
     def count_by_status(self, task_id: str, status: str) -> int:
         with transaction() as conn:
             row = conn.execute(
@@ -267,4 +294,3 @@ class SubTaskRepository:
         total = int(row["total"])
         completed = int(row["completed"] or 0)
         return 0.0 if total == 0 else round((completed / total) * 100, 2)
-

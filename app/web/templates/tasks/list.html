@@ -1,17 +1,31 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="hero">
-  <div>
-    <p class="eyebrow">AI Task Execution System</p>
-    <h1>任务中心</h1>
-    <p class="muted">创建任务后，系统会自动进行需求解析、澄清、拆解、执行、Review/Test 和报告生成。</p>
-  </div>
+{% set total = tasks|length %}
+{% set completed = tasks|selectattr("status", "equalto", "COMPLETED")|list|length %}
+{% set running = tasks|selectattr("status", "equalto", "RUNNING")|list|length %}
+
+<section class="metric-strip" data-reveal>
+  <article>
+    <p>总任务</p>
+    <strong>{{ total }}</strong>
+  </article>
+  <article>
+    <p>进行中</p>
+    <strong>{{ running }}</strong>
+  </article>
+  <article>
+    <p>已完成</p>
+    <strong>{{ completed }}</strong>
+  </article>
 </section>
 
 <section class="grid two">
-  <div class="panel">
-    <h2>新建任务</h2>
+  <section class="surface" data-reveal data-delay="80">
+    <header class="section-head">
+      <h2>创建任务</h2>
+      <p class="muted">输入一句话需求，系统会自动进入澄清与执行流程。</p>
+    </header>
     <form method="post" action="/tasks" class="form">
       <label>
         <span>任务标题</span>
@@ -29,35 +43,48 @@
           {% endfor %}
         </select>
       </label>
-      <button type="submit">创建任务</button>
+      <button type="submit">创建并开始解析</button>
     </form>
-  </div>
+  </section>
 
-  <div class="panel">
-    <h2>任务列表</h2>
+  <section class="surface" data-reveal data-delay="140">
+    <header class="section-head">
+      <h2>任务列表</h2>
+      <p class="muted">按最新创建时间排序，支持进入详情查看执行过程。</p>
+    </header>
     {% if tasks %}
-    <div class="task-list">
-      {% for task in tasks %}
-      <a class="task-card" href="/tasks/{{ task.id }}">
-        <div class="task-card-header">
-          <strong>{{ task.title }}</strong>
-          <span class="badge">{{ task.status }}</span>
-        </div>
-        <div class="task-card-body">
-          <p>{{ task.prompt[:120] }}{% if task.prompt|length > 120 %}...{% endif %}</p>
-          <div class="meta">
-            <span>阶段：{{ task.current_phase }}</span>
-            <span>进度：{{ task.progress_percent }}%</span>
-            <span>子任务：{{ task.completed_subtask_count }}/{{ task.subtask_count }}</span>
-          </div>
-        </div>
-      </a>
-      {% endfor %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>任务</th>
+            <th>状态</th>
+            <th>阶段</th>
+            <th>进度</th>
+            <th>子任务</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+          <tr>
+            <td>
+              <strong>{{ task.title }}</strong>
+              <p class="row-note">{{ task.prompt[:90] }}{% if task.prompt|length > 90 %}...{% endif %}</p>
+            </td>
+            <td><span class="status-pill" data-state="{{ task.status }}">{{ task.status }}</span></td>
+            <td>{{ task.current_phase }}</td>
+            <td>{{ task.progress_percent }}%</td>
+            <td>{{ task.completed_subtask_count }}/{{ task.subtask_count }}</td>
+            <td><a class="inline-link" href="/tasks/{{ task.id }}">查看</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% else %}
     <p class="muted">还没有任务，先创建一个。</p>
     {% endif %}
-  </div>
+  </section>
 </section>
 {% endblock %}
-

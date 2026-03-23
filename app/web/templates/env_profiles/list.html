@@ -1,17 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="hero">
-  <div>
-    <p class="eyebrow">Environment Profiles</p>
-    <h1>环境配置</h1>
-    <p class="muted">配置模型、OpenAI 兼容接口、超时、并发和自动子 Agent 开关。</p>
-  </div>
-</section>
-
 <section class="grid two">
-  <div class="panel">
-    <h2>新增配置</h2>
+  <section class="surface" data-reveal data-delay="80">
+    <header class="section-head">
+      <h2>新增配置</h2>
+      <p class="muted">用于定义模型提供方、并发和子 Agent 行为策略。</p>
+    </header>
     <form method="post" action="/env-profiles" class="form">
       <label><span>名称</span><input type="text" name="name" required /></label>
       <label>
@@ -34,31 +29,34 @@
       <label class="checkbox"><input type="checkbox" name="enable_docker_sandbox" /> 启用 Docker 沙箱</label>
       <button type="submit">保存配置</button>
     </form>
-  </div>
+  </section>
 
-  <div class="panel">
-    <h2>已有配置</h2>
-    <div class="task-list">
+  <section class="surface" data-reveal data-delay="140">
+    <header class="section-head">
+      <h2>已有配置</h2>
+      <p class="muted">按创建顺序展示，方便选择任务运行环境。</p>
+    </header>
+    <div class="profile-list">
       {% for profile in env_profiles %}
-      <div class="task-card">
-        <div class="task-card-header">
+      <article class="profile-row">
+        <div class="profile-row-main">
           <strong>{{ profile.name }}</strong>
-          <span class="badge">{{ profile.default_model }}</span>
+          <p class="row-note">{{ profile.default_model }}</p>
         </div>
-        <div class="task-card-body">
-          <div class="meta">
-            <span>模式：{{ profile.provider_type }}</span>
-            <span>并发：{{ profile.max_concurrency }}</span>
-            <span>超时：{{ profile.default_timeout_sec }}s</span>
-            <span>重试：{{ profile.max_retries }}</span>
-          </div>
+        <div class="profile-meta">
+          <span>模式：{{ profile.provider_type }}</span>
+          <span>并发：{{ profile.max_concurrency }}</span>
+          <span>超时：{{ profile.default_timeout_sec }}s</span>
+          <span>重试：{{ profile.max_retries }}</span>
+        </div>
+        <div class="profile-extra">
           {% if profile.api_base_url %}
-          <p class="muted">Base URL: {{ profile.api_base_url }}</p>
+          <p class="row-note">Base URL: {{ profile.api_base_url }}</p>
           {% endif %}
         </div>
-      </div>
+      </article>
       {% endfor %}
     </div>
-  </div>
+  </section>
 </section>
 {% endblock %}

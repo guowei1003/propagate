@@ -30,6 +30,7 @@ from app.repositories.subtask_repository import SubTaskRepository
 from app.repositories.task_repository import TaskRepository
 from app.services.artifact_service import artifact_service
 from app.services.event_service import event_service
+from app.services.runtime_context_service import runtime_context_service
 
 
 # Per-task locks to prevent concurrent finalize operations
@@ -125,10 +126,31 @@ class TaskOrchestrator:
         items: list[dict] = []
         dependencies: list[tuple[str, str]] = []
         subtask_ids: list[str] = []
+        runtime_agents: list[dict] = []
         for index, subtask in enumerate(decomposed):
-            plan = task_evaluator_agent.run(subtask, env_profile)
             subtask_id = str(uuid.uuid4())
+            plan = task_evaluator_agent.run(subtask, env_profile or {}, task_id, index)
+            runtime_context = runtime_context_service.prepare_subtask_runtime(
+                task=task,
+                subtask_id=subtask_id,
+                subtask_name=subtask.name,
+                subtask_description=subtask.description,
+                requirement=requirement,
+                agent_template=plan.agent_template,
+                skills=plan.skills,
+                timeout_sec=plan.timeout_sec,
+                max_retries=plan.max_retries,
+                env_profile=env_profile,
+            )
             subtask_ids.append(subtask_id)
+            runtime_agents.append(
+                {
+                    "subtask_id": subtask_id,
+                    "agent_name": plan.agent_template,
+                    "skills": plan.skills,
+                    "sandbox_mode": runtime_context["sandbox_mode"],
+                }
+            )
             items.append(
                 {
                     "id": subtask_id,
@@ -143,6 +165,7 @@ class TaskOrchestrator:
                     "input_context": {
                         "task_prompt": task["prompt"],
                         "requirement_goal": requirement["goal"],
+                        "runtime": runtime_context,
                     },
                     "timeout_sec": plan.timeout_sec,
                     "max_retries": plan.max_retries,
@@ -153,6 +176,12 @@ class TaskOrchestrator:
                 dependencies.append((subtask_ids[dep_index], subtask_ids[index]))
         self.subtasks.replace_subtasks(task_id, items, dependencies)
         event_service.publish(task_id, "task.decomposed", f"Created {len(items)} subtasks.")
+        event_service.publish(
+            task_id,
+            "task.runtime.prepared",
+            f"Prepared {len(runtime_agents)} isolated runtime agents.",
+            payload={"agents": runtime_agents},
+        )
         self.refresh_ready_subtasks(task_id)
         self.tasks.update_task(task_id, status=TASK_STATUS_RUNNING, current_phase=TASK_PHASE_SUBTASK_RUNNING)
 
@@ -178,9 +207,9 @@ class TaskOrchestrator:
     def finalize_task_if_done(self, task_id: str) -> None:
         """Check if all subtasks are done and generate final report. Thread-safe."""
         lock = _get_task_lock(task_id)
-        if not lock.acquire(blocking=False):
-            # Another thread is already processing this task
-            return
+        # Block until the current finalize pass completes so we never drop a
+        # terminal-state check under concurrent subtask completions.
+        lock.acquire()
         try:
             task = self.tasks.get_task(task_id)
             requirement = self.requirements.get_latest(task_id)

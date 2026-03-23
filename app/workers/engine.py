@@ -26,6 +26,7 @@ class WorkerEngine:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._active_ids: set[str] = set()
+        self._active_task_counts: dict[str, int] = {}
         self._active_lock = threading.Lock()
         self.subtasks = SubTaskRepository()
         self.tasks = TaskRepository()
@@ -49,19 +50,48 @@ class WorkerEngine:
 
     def _loop(self) -> None:
         while not self._stop_event.is_set():
-            available = max(0, settings.max_worker_concurrency - len(self._active_ids))
+            with self._active_lock:
+                active_count = len(self._active_ids)
+            available = max(0, settings.max_worker_concurrency - active_count)
             if available:
-                ready_items = self.subtasks.claim_ready(available)
-                for item in ready_items:
+                candidates = self.subtasks.list_ready(max(available * 4, available))
+                scheduled = 0
+                for item in candidates:
+                    if scheduled >= available:
+                        break
+                    task = self.tasks.get_task(item["task_id"])
+                    if not task:
+                        continue
+                    task_limit = self._resolve_task_concurrency_limit(task)
+                    with self._active_lock:
+                        active_for_task = self._active_task_counts.get(task["id"], 0)
+                        if active_for_task >= task_limit:
+                            continue
+                    if not self.subtasks.claim_specific(item["id"]):
+                        continue
                     with self._active_lock:
                         self._active_ids.add(item["id"])
+                        self._active_task_counts[task["id"]] = self._active_task_counts.get(task["id"], 0) + 1
                     future = self.pool.submit(self._run_subtask, item["id"])
-                    future.add_done_callback(lambda _, subtask_id=item["id"]: self._release(subtask_id))
+                    future.add_done_callback(
+                        lambda _, subtask_id=item["id"], task_id=task["id"]: self._release(subtask_id, task_id)
+                    )
+                    scheduled += 1
             time.sleep(settings.worker_poll_interval_sec)
 
-    def _release(self, subtask_id: str) -> None:
+    def _resolve_task_concurrency_limit(self, task: dict) -> int:
+        profile = self.env_profiles.get_profile_for_runtime(task["env_profile_id"])
+        profile_limit = int((profile or {}).get("max_concurrency") or settings.max_worker_concurrency)
+        return max(1, min(settings.max_worker_concurrency, profile_limit))
+
+    def _release(self, subtask_id: str, task_id: str) -> None:
         with self._active_lock:
             self._active_ids.discard(subtask_id)
+            active = self._active_task_counts.get(task_id, 0)
+            if active <= 1:
+                self._active_task_counts.pop(task_id, None)
+            else:
+                self._active_task_counts[task_id] = active - 1
 
     def _store_review_result(self, subtask_id: str, review) -> None:
         with transaction() as conn:

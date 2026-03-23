@@ -55,7 +55,68 @@ class OrchestratorTestCase(unittest.TestCase):
         subtasks = SubTaskRepository().list_by_task(task_id)
         self.assertGreaterEqual(len(subtasks), 2)
 
+    def test_runtime_isolation_context_created_for_subtasks(self) -> None:
+        task_id = task_orchestrator.create_task(
+            title="Build site",
+            prompt="创建一个网站，包含前后端和任务调度",
+            env_profile_id=self.profile["id"],
+        )
+        pending = ClarificationRepository().get_pending_round(task_id)
+        self.assertIsNotNone(pending)
+        task_orchestrator.submit_clarification_answers(
+            task_id,
+            pending["id"],
+            {
+                "deliverable": "可运行的网站代码",
+                "acceptance": "核心流程可访问、日志可追踪、报告生成",
+                "scope": "包括登录、任务创建、任务详情和事件流展示页面",
+                "target_users": "中小团队运营人员",
+                "core_features": "登录、任务创建、进度追踪",
+                "style_preferences": "简洁商务风格",
+            },
+        )
+        subtasks = SubTaskRepository().list_by_task(task_id)
+        self.assertGreaterEqual(len(subtasks), 2)
+        for subtask in subtasks:
+            runtime = subtask["input_context"].get("runtime")
+            self.assertIsNotNone(runtime)
+            self.assertTrue(Path(runtime["workspace_path"]).exists())
+            self.assertTrue(Path(runtime["manifest_path"]).exists())
+            self.assertGreaterEqual(len(runtime["skill_files"]), 1)
+            self.assertTrue(subtask["agent_template"].startswith("tmp_"))
+
+    def test_disable_auto_sub_agents_keeps_static_templates(self) -> None:
+        profile_id = self.env_repo.create_profile(
+            name="No Auto Agent",
+            provider_type="demo",
+            api_base_url="",
+            api_key="",
+            default_model="demo-heuristic",
+            review_model="demo-review",
+            test_model="demo-test",
+            temperature=0.2,
+            max_concurrency=1,
+            default_timeout_sec=300,
+            max_retries=1,
+            enable_auto_sub_agents=False,
+            enable_docker_sandbox=False,
+        )
+        task_id = task_orchestrator.create_task(
+            title="Static template",
+            prompt="实现一个后端任务编排系统",
+            env_profile_id=profile_id,
+        )
+        pending = ClarificationRepository().get_pending_round(task_id)
+        self.assertIsNotNone(pending)
+        task_orchestrator.submit_clarification_answers(
+            task_id,
+            pending["id"],
+            {"deliverable": "后端代码", "acceptance": "接口可用并产生报告", "scope": "任务编排、子任务管理和报告生成"},
+        )
+        subtasks = SubTaskRepository().list_by_task(task_id)
+        self.assertGreaterEqual(len(subtasks), 1)
+        self.assertFalse(any(item["agent_template"].startswith("tmp_") for item in subtasks))
+
 
 if __name__ == "__main__":
     unittest.main()
-

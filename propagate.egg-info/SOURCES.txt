@@ -41,6 +41,7 @@ app/services/__init__.py
 app/services/artifact_service.py
 app/services/event_service.py
 app/services/llm_service.py
+app/services/runtime_context_service.py
 app/workers/__init__.py
 app/workers/engine.py
 propagate.egg-info/PKG-INFO

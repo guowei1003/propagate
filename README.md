@@ -7,6 +7,8 @@ Propagate is a low-dependency AI task execution system with a built-in UI, contr
 - Create tasks from a prompt in the web UI
 - Requirement analysis with clarification rounds
 - Task decomposition into subtasks with dependency handling
+- Dynamic temporary agent templates and skill binding per subtask
+- Isolated runtime workspace materialization for every subtask
 - Background worker that executes subtasks
 - Built-in review and test loop with retries
 - Real-time task event streaming over SSE

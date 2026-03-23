@@ -1,41 +1,47 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="detail-header">
-  <div>
+<section class="surface detail-summary" data-reveal>
+  <div class="summary-main">
     <p class="eyebrow">Task Detail</p>
-    <h1>{{ task.title }}</h1>
+    <h2>{{ task.title }}</h2>
     <p class="muted">{{ task.prompt }}</p>
   </div>
-  <div class="status-card">
-    <span class="badge">{{ task.status }}</span>
-    <p>阶段：{{ task.current_phase }}</p>
-    <p>进度：{{ task.progress_percent }}%</p>
-    <p>模型：{{ env_profile.default_model if env_profile else "-" }}</p>
+  <div class="summary-meta">
+    <p><span>状态</span><strong class="status-pill" data-state="{{ task.status }}">{{ task.status }}</strong></p>
+    <p><span>阶段</span><strong>{{ task.current_phase }}</strong></p>
+    <p><span>进度</span><strong>{{ task.progress_percent }}%</strong></p>
+    <p><span>模型</span><strong>{{ env_profile.default_model if env_profile else "-" }}</strong></p>
   </div>
 </section>
 
 <section class="grid two">
-  <div class="panel">
-    <h2>需求解析</h2>
+  <section class="surface" data-reveal data-delay="80">
+    <header class="section-head">
+      <h2>需求解析</h2>
+      <p class="muted">当前任务的结构化目标、范围与验收。</p>
+    </header>
     {% if requirement %}
-    <div class="detail-block">
-      <p><strong>目标</strong></p>
+    <div class="stack-block">
+      <p class="stack-title">目标</p>
       <p>{{ requirement.goal }}</p>
-      <p><strong>范围</strong></p>
+      <p class="stack-title">范围</p>
       <p>{{ requirement.scope }}</p>
-      <p><strong>输出</strong></p>
+      <p class="stack-title">输出</p>
       <pre>{{ requirement.outputs | tojson(indent=2) }}</pre>
-      <p><strong>验收</strong></p>
+      <p class="stack-title">验收</p>
       <pre>{{ requirement.acceptance | tojson(indent=2) }}</pre>
     </div>
     {% else %}
     <p class="muted">尚未生成需求解析结果。</p>
     {% endif %}
-  </div>
+  </section>
 
-  <div class="panel">
-    <h2>澄清问答</h2>
+  <section class="surface" data-reveal data-delay="140">
+    <header class="section-head">
+      <h2>澄清问答</h2>
+      <p class="muted">如果需求信息不足，系统会在这里持续追问。</p>
+    </header>
     {% if pending_round %}
     <form method="post" action="/tasks/{{ task.id }}/clarifications/{{ pending_round.id }}" class="form">
       {% for question in pending_round.questions %}
@@ -53,52 +59,62 @@
     {% if clarification_rounds %}
     <div class="history">
       {% for round in clarification_rounds %}
-      <div class="history-item">
-        <strong>{{ round.status }}</strong>
+      <article class="history-item">
+        <strong class="status-pill" data-state="{{ round.status }}">{{ round.status }}</strong>
         <pre>{{ round.questions | tojson(indent=2) }}</pre>
         {% if round.answers %}
         <pre>{{ round.answers | tojson(indent=2) }}</pre>
         {% endif %}
-      </div>
+      </article>
       {% endfor %}
     </div>
     {% endif %}
-  </div>
+  </section>
 </section>
 
 <section class="grid two">
-  <div class="panel">
-    <h2>子任务</h2>
+  <section class="surface" data-reveal data-delay="80">
+    <header class="section-head">
+      <h2>子任务</h2>
+      <p class="muted">包含分类、状态、重试信息与运行隔离模式。</p>
+    </header>
     {% if subtasks %}
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>名称</th>
-          <th>分类</th>
-          <th>状态</th>
-          <th>重试</th>
-          <th>模板</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for subtask in subtasks %}
-        <tr>
-          <td>{{ subtask.name }}</td>
-          <td>{{ subtask.category }}</td>
-          <td>{{ subtask.status }}</td>
-          <td>{{ subtask.retry_count }}/{{ subtask.max_retries }}</td>
-          <td>{{ subtask.agent_template }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>名称</th>
+            <th>分类</th>
+            <th>状态</th>
+            <th>重试</th>
+            <th>Agent</th>
+            <th>隔离模式</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subtask in subtasks %}
+          <tr>
+            <td>{{ subtask.name }}</td>
+            <td>{{ subtask.category }}</td>
+            <td><span class="status-pill" data-state="{{ subtask.status }}">{{ subtask.status }}</span></td>
+            <td>{{ subtask.retry_count }}/{{ subtask.max_retries }}</td>
+            <td>{{ subtask.agent_template }}</td>
+            <td>{{ subtask.input_context.runtime.sandbox_mode if subtask.input_context.runtime else "-" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% else %}
     <p class="muted">子任务尚未生成。</p>
     {% endif %}
-  </div>
+  </section>
 
-  <div class="panel">
-    <h2>任务日志</h2>
+  <section class="surface" data-reveal data-delay="140">
+    <header class="section-head">
+      <h2>任务日志</h2>
+      <p class="muted">实时 SSE 事件流，自动滚动到最新消息。</p>
+    </header>
     <div class="log-stream" data-task-stream="{{ task.id }}" id="log-stream">
       {% for event in events %}
       <div class="log-line level-{{ event.level }}">
@@ -109,12 +125,15 @@
       </div>
       {% endfor %}
     </div>
-  </div>
+  </section>
 </section>
 
 <section class="grid two">
-  <div class="panel">
-    <h2>产物</h2>
+  <section class="surface" data-reveal data-delay="80">
+    <header class="section-head">
+      <h2>产物</h2>
+      <p class="muted">记录每次执行输出与最终报告文件路径。</p>
+    </header>
     {% if artifacts %}
     <ul class="artifact-list">
       {% for artifact in artifacts %}
@@ -128,16 +147,18 @@
     {% else %}
     <p class="muted">还没有产物。</p>
     {% endif %}
-  </div>
+  </section>
 
-  <div class="panel">
-    <h2>最终报告</h2>
+  <section class="surface" data-reveal data-delay="140">
+    <header class="section-head">
+      <h2>最终报告</h2>
+      <p class="muted">任务闭环完成后自动生成的 Markdown 总结。</p>
+    </header>
     {% if report %}
     <pre class="report">{{ report.report_markdown }}</pre>
     {% else %}
     <p class="muted">报告尚未生成。</p>
     {% endif %}
-  </div>
+  </section>
 </section>
 {% endblock %}
-
