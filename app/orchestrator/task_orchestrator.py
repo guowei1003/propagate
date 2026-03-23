@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import threading
 import uuid
 
@@ -56,7 +57,28 @@ class TaskOrchestrator:
         self.reports = ReportRepository()
         self.env_profiles = EnvProfileRepository()
 
-    def create_task(self, title: str, prompt: str, env_profile_id: str | None = None) -> str:
+    def _compact_text(self, value: str) -> str:
+        return re.sub(r"\s+", " ", value).strip().strip("。.;；,，")
+
+    def _truncate_title(self, value: str, limit: int = 26) -> str:
+        cleaned = self._compact_text(value)
+        if not cleaned:
+            return "未命名需求"
+        if len(cleaned) <= limit:
+            return cleaned
+        return f"{cleaned[:limit].rstrip()}..."
+
+    def _derive_initial_title(self, prompt: str) -> str:
+        first_line = prompt.splitlines()[0] if prompt else ""
+        return self._truncate_title(first_line or prompt)
+
+    def _derive_final_title(self, analysis) -> str:
+        deliverable = str(analysis.outputs.get("primary_deliverable", "")).strip()
+        if deliverable and deliverable != "待澄清":
+            return self._truncate_title(deliverable)
+        return self._truncate_title(analysis.goal)
+
+    def create_task(self, title: str | None, prompt: str, env_profile_id: str | None = None) -> str:
         profile = (
             self.env_profiles.get_profile_for_runtime(env_profile_id)
             if env_profile_id
@@ -64,7 +86,14 @@ class TaskOrchestrator:
         )
         if not profile:
             raise ValueError("No environment profile available.")
-        task_id = self.tasks.create_task(title=title, prompt=prompt, env_profile_id=profile["id"])
+        cleaned_title = (title or "").strip()
+        auto_generated = not bool(cleaned_title)
+        task_id = self.tasks.create_task(
+            title=cleaned_title or self._derive_initial_title(prompt),
+            prompt=prompt,
+            env_profile_id=profile["id"],
+            title_auto_generated=auto_generated,
+        )
         event_service.publish(task_id, "task.created", "Task created.")
         self.start_requirement_analysis(task_id)
         return task_id
@@ -108,6 +137,8 @@ class TaskOrchestrator:
                 level="warn",
             )
             return
+        if int(task.get("title_auto_generated") or 0) == 1:
+            self.tasks.update_task(task_id, title=self._derive_final_title(analysis))
         self.decompose_task(task_id)
 
     def submit_clarification_answers(self, task_id: str, round_id: str, answers: dict[str, str]) -> None:

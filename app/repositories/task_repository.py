@@ -8,20 +8,21 @@ from app.repositories.common import row_to_dict, utcnow
 
 
 class TaskRepository:
-    def create_task(self, title: str, prompt: str, env_profile_id: str) -> str:
+    def create_task(self, title: str, prompt: str, env_profile_id: str, title_auto_generated: bool = True) -> str:
         task_id = str(uuid.uuid4())
         now = utcnow()
         with transaction() as conn:
             conn.execute(
                 """
                 INSERT INTO tasks (
-                    id, title, prompt, status, current_phase, env_profile_id,
+                    id, title, title_auto_generated, prompt, status, current_phase, env_profile_id,
                     progress_percent, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     task_id,
                     title,
+                    int(title_auto_generated),
                     prompt,
                     TASK_STATUS_CREATED,
                     TASK_PHASE_REQUIREMENT_ANALYZING,
@@ -58,6 +59,8 @@ class TaskRepository:
         self,
         task_id: str,
         *,
+        title: str | None = None,
+        title_auto_generated: bool | None = None,
         status: str | None = None,
         current_phase: str | None = None,
         progress_percent: float | None = None,
@@ -68,6 +71,8 @@ class TaskRepository:
         if not current:
             return
         values = {
+            "title": title if title is not None else current["title"],
+            "title_auto_generated": int(title_auto_generated) if title_auto_generated is not None else current.get("title_auto_generated", 1),
             "status": status or current["status"],
             "current_phase": current_phase or current["current_phase"],
             "progress_percent": progress_percent if progress_percent is not None else current["progress_percent"],
@@ -80,7 +85,9 @@ class TaskRepository:
             conn.execute(
                 """
                 UPDATE tasks
-                SET status = :status,
+                SET title = :title,
+                    title_auto_generated = :title_auto_generated,
+                    status = :status,
                     current_phase = :current_phase,
                     progress_percent = :progress_percent,
                     failure_reason = :failure_reason,
@@ -90,4 +97,3 @@ class TaskRepository:
                 """,
                 values,
             )
-

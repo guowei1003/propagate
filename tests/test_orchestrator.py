@@ -117,6 +117,54 @@ class OrchestratorTestCase(unittest.TestCase):
         self.assertGreaterEqual(len(subtasks), 1)
         self.assertFalse(any(item["agent_template"].startswith("tmp_") for item in subtasks))
 
+    def test_auto_title_generated_from_requirement_when_title_missing(self) -> None:
+        task_id = task_orchestrator.create_task(
+            title=None,
+            prompt="实现一个任务管理网站，支持看板、筛选和实时日志",
+            env_profile_id=self.profile["id"],
+        )
+        pending = ClarificationRepository().get_pending_round(task_id)
+        self.assertIsNotNone(pending)
+        task_orchestrator.submit_clarification_answers(
+            task_id,
+            pending["id"],
+            {
+                "deliverable": "任务管理网站代码",
+                "acceptance": "可创建任务并查看实时日志",
+                "scope": "任务看板、筛选、实时日志三大功能",
+                "target_users": "项目经理与开发",
+                "core_features": "任务看板、筛选、日志",
+                "style_preferences": "极简风格",
+            },
+        )
+        task = TaskRepository().get_task(task_id)
+        self.assertEqual(task["title"], "任务管理网站代码")
+        self.assertEqual(int(task["title_auto_generated"]), 1)
+
+    def test_manual_title_is_not_overwritten(self) -> None:
+        task_id = task_orchestrator.create_task(
+            title="固定标题",
+            prompt="实现一个任务管理网站，支持看板、筛选和实时日志",
+            env_profile_id=self.profile["id"],
+        )
+        pending = ClarificationRepository().get_pending_round(task_id)
+        self.assertIsNotNone(pending)
+        task_orchestrator.submit_clarification_answers(
+            task_id,
+            pending["id"],
+            {
+                "deliverable": "任务管理网站代码",
+                "acceptance": "可创建任务并查看实时日志",
+                "scope": "任务看板、筛选、实时日志三大功能",
+                "target_users": "项目经理与开发",
+                "core_features": "任务看板、筛选、日志",
+                "style_preferences": "极简风格",
+            },
+        )
+        task = TaskRepository().get_task(task_id)
+        self.assertEqual(task["title"], "固定标题")
+        self.assertEqual(int(task["title_auto_generated"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

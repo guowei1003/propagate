@@ -24,16 +24,12 @@
   <section class="surface" data-reveal data-delay="80">
     <header class="section-head">
       <h2>创建任务</h2>
-      <p class="muted">输入一句话需求，系统会自动进入澄清与执行流程。</p>
+      <p class="muted">只输入需求描述，系统会先澄清再自动总结任务标题。</p>
     </header>
     <form method="post" action="/tasks" class="form">
       <label>
-        <span>任务标题</span>
-        <input type="text" name="title" placeholder="例如：实现一套 AI 任务执行平台" required />
-      </label>
-      <label>
-        <span>任务提示词</span>
-        <textarea name="prompt" rows="8" placeholder="描述任务目标、范围、关键功能与约束。" required></textarea>
+        <span>需求描述</span>
+        <textarea name="prompt" rows="8" placeholder="例如：做一个可发布的官网，支持内容管理与表单收集。" required></textarea>
       </label>
       <label>
         <span>环境配置</span>
@@ -72,8 +68,8 @@
               <strong>{{ task.title }}</strong>
               <p class="row-note">{{ task.prompt[:90] }}{% if task.prompt|length > 90 %}...{% endif %}</p>
             </td>
-            <td><span class="status-pill" data-state="{{ task.status }}">{{ task.status }}</span></td>
-            <td>{{ task.current_phase }}</td>
+            <td><span class="status-pill" data-state="{{ task.status }}">{{ task.status|status_zh }}</span></td>
+            <td>{{ task.current_phase|phase_zh }}</td>
             <td>{{ task.progress_percent }}%</td>
             <td>{{ task.completed_subtask_count }}/{{ task.subtask_count }}</td>
             <td><a class="inline-link" href="/tasks/{{ task.id }}">查看</a></td>

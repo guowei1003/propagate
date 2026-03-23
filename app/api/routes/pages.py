@@ -6,10 +6,17 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.routes.dependencies import build_task_context, env_profiles, tasks
 from app.config import BASE_DIR
+from app.services.view_service import event_zh, phase_zh, pretty_json, role_zh, status_zh
 
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "web" / "templates"))
+templates.env.filters["status_zh"] = status_zh
+templates.env.filters["phase_zh"] = phase_zh
+templates.env.filters["event_zh"] = event_zh
+templates.env.filters["role_zh"] = role_zh
+templates.env.filters["pretty_json"] = pretty_json
+templates.env.policies["json.dumps_kwargs"] = {"ensure_ascii": False}
 
 
 @router.get("/", response_class=HTMLResponse)

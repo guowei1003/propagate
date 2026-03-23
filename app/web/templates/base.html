@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title }} | Propagate</title>
     <link rel="stylesheet" href="/static/app.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
     <div class="scroll-progress" id="scroll-progress"></div>
     <div class="ambient ambient-a"></div>
     <div class="ambient ambient-b"></div>
     <div class="ambient ambient-c"></div>
-    <div class="shell">
-      <aside class="sidebar" data-reveal>
+    <div class="app-shell">
+      <header class="top-header" data-reveal>
         <a class="brand" href="/tasks">
           <span class="brand-mark">P</span>
           <span class="brand-text">Propagate</span>
         </a>
-        <p class="nav-caption">AI Task Orchestration Console</p>
         <nav>
           <a href="/tasks" class="{{ 'is-active' if request.url.path.startswith('/tasks') else '' }}">任务中心</a>
           <a href="/env-profiles" class="{{ 'is-active' if request.url.path.startswith('/env-profiles') else '' }}">环境配置</a>
         </nav>
-      </aside>
-      <main class="content">
+      </header>
+      <main class="page-body">
         <header class="page-header" data-reveal>
           <p class="eyebrow">Propagate Workspace</p>
           <h1>{{ page_title }}</h1>

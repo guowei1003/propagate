@@ -73,6 +73,7 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS tasks (
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
+                title_auto_generated INTEGER NOT NULL DEFAULT 1,
                 prompt TEXT NOT NULL,
                 status TEXT NOT NULL,
                 current_phase TEXT NOT NULL,
@@ -215,6 +216,7 @@ def init_db() -> None:
         _ensure_column(conn, "env_profiles", "api_base_url", "TEXT")
         _ensure_column(conn, "env_profiles", "api_key", "TEXT")
         _ensure_column(conn, "env_profiles", "temperature", "REAL NOT NULL DEFAULT 0.2")
+        _ensure_column(conn, "tasks", "title_auto_generated", "INTEGER NOT NULL DEFAULT 1")
 
 
 def _ensure_column(conn: sqlite3.Connection, table_name: str, column_name: str, definition: str) -> None:

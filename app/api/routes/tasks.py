@@ -43,17 +43,16 @@ def create_task_api(payload: dict) -> dict:
     title = payload.get("title", "").strip()
     prompt = payload.get("prompt", "").strip()
     env_profile_id = payload.get("env_profile_id")
-    if not title or not prompt:
-        raise HTTPException(status_code=400, detail="title and prompt are required")
-    task_id = task_orchestrator.create_task(title=title, prompt=prompt, env_profile_id=env_profile_id)
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+    task_id = task_orchestrator.create_task(title=title or None, prompt=prompt, env_profile_id=env_profile_id)
     return {"task_id": task_id}
 
 
 @router.post("/tasks")
 def create_task_form(
-    title: str = Form(...),
     prompt: str = Form(...),
     env_profile_id: str = Form(...),
 ) -> RedirectResponse:
-    task_id = task_orchestrator.create_task(title=title.strip(), prompt=prompt.strip(), env_profile_id=env_profile_id)
+    task_id = task_orchestrator.create_task(title=None, prompt=prompt.strip(), env_profile_id=env_profile_id)
     return RedirectResponse(url=f"/tasks/{task_id}", status_code=303)
