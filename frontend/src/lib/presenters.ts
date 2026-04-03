@@ -87,25 +87,25 @@ export function buildTaskMetrics(
     {
       label: "任务总数",
       value: formatCount(tasks.length),
-      detail: "当前已进入系统的任务数量",
+      detail: "当前已进入控制台的任务",
       tone: "info"
     },
     {
       label: "待补充",
       value: formatCount(waitingInputCount),
-      detail: "仍需人工补充澄清的问题",
+      detail: "等待澄清答复",
       tone: waitingInputCount > 0 ? "warning" : "neutral"
     },
     {
-      label: "执行中",
+      label: "活跃任务",
       value: formatCount(runningCount),
-      detail: selectedTask?.current_phase ? `当前聚焦：${getPhaseLabel(selectedTask.current_phase)}` : "查看执行链路推进状态",
+      detail: selectedTask?.current_phase ? `当前阶段：${getPhaseLabel(selectedTask.current_phase)}` : "查看执行链路推进状态",
       tone: runningCount > 0 ? "info" : "neutral"
     },
     {
-      label: "运行环境",
+      label: "可用环境",
       value: formatCount(profiles.length),
-      detail: "可用于任务编排的环境配置",
+      detail: "当前可选运行配置",
       tone: profiles.length > 0 ? "success" : "warning"
     }
   ];
@@ -122,27 +122,27 @@ export function buildRunMetrics(
 
   return [
     {
-      label: "可监控运行",
+      label: "活跃运行",
       value: formatCount(runs.length),
-      detail: "当前带有运行编号的任务实例",
+      detail: "当前可订阅的运行实例",
       tone: runs.length > 0 ? "info" : "neutral"
     },
     {
-      label: "执行中运行",
+      label: "执行中",
       value: formatCount(runningCount),
-      detail: "正在推进子任务的执行链路",
+      detail: "仍在推进中的执行链路",
       tone: runningCount > 0 ? "info" : "neutral"
     },
     {
-      label: "依赖阻塞",
+      label: "依赖关系",
       value: formatCount(dependencyCount),
-      detail: "当前监控运行中的前后置关系",
+      detail: "当前运行中的前后置节点",
       tone: dependencyCount > 0 ? "warning" : "success"
     },
     {
       label: "事件条目",
       value: formatCount(eventCount),
-      detail: "用于追踪执行推进的事件流",
+      detail: "用于追踪推进的事件流",
       tone: eventCount > 0 ? "success" : "neutral"
     }
   ];
@@ -157,7 +157,7 @@ export function buildCapabilityMetrics(items: Array<{ risk_score: number; status
     {
       label: "审批总数",
       value: formatCount(items.length),
-      detail: "能力审批记录总量",
+      detail: "当前能力审批记录",
       tone: items.length > 0 ? "info" : "neutral"
     },
     {
@@ -169,13 +169,13 @@ export function buildCapabilityMetrics(items: Array<{ risk_score: number; status
     {
       label: "待决策",
       value: formatCount(pending),
-      detail: "仍需人工给出审批动作",
+      detail: "仍需人工决策",
       tone: pending > 0 ? "warning" : "success"
     },
     {
       label: "已通过",
       value: formatCount(approved),
-      detail: "已明确允许进入执行链路",
+      detail: "已允许进入执行链路",
       tone: approved > 0 ? "success" : "neutral"
     }
   ];
@@ -190,27 +190,27 @@ export function buildProfileMetrics(
 
   return [
     {
-      label: "环境数量",
+      label: "可用环境",
       value: formatCount(items.length),
-      detail: "可供执行编排调用的环境",
+      detail: "当前可供编排调用的环境",
       tone: items.length > 0 ? "info" : "warning"
     },
     {
       label: "Demo 模式",
       value: formatCount(demoCount),
-      detail: "适合调试流程的环境数量",
+      detail: "适合调试流程",
       tone: demoCount > 0 ? "neutral" : "warning"
     },
     {
       label: "兼容 OpenAI",
       value: formatCount(compatibleCount),
-      detail: "可接入外部模型服务的环境数量",
+      detail: "可接入外部模型服务",
       tone: compatibleCount > 0 ? "success" : "neutral"
     },
     {
-      label: "编辑状态",
+      label: "表单状态",
       value: editingId ? "进行中" : "新建模式",
-      detail: editingId ? "当前表单已载入待编辑配置" : "可以直接创建新环境配置",
+      detail: editingId ? "当前表单已载入环境配置" : "当前处于新增环境模式",
       tone: editingId ? "warning" : "info"
     }
   ];
@@ -225,9 +225,9 @@ export function buildArtifactMetrics(payload: {
 
   return [
     {
-      label: "最近运行",
+      label: "最近 Run",
       value: payload.runId || "暂无",
-      detail: payload.runId ? "当前页面聚焦的最近运行编号" : "当前还没有完成可交付的运行",
+      detail: payload.runId ? "当前页面聚焦的运行编号" : "当前还没有可交付运行",
       tone: payload.runId ? "info" : "neutral"
     },
     {
@@ -239,13 +239,13 @@ export function buildArtifactMetrics(payload: {
     {
       label: "Bundle 状态",
       value: payload.isBuilding ? "构建中" : payload.runId ? "可操作" : "等待运行",
-      detail: payload.isBuilding ? "正在生成 Bundle 产物" : "可以继续构建或下载交付内容",
+      detail: payload.isBuilding ? "正在生成 Bundle 产物" : "可以继续构建或下载",
       tone: payload.isBuilding ? "warning" : payload.runId ? "info" : "neutral"
     },
     {
-      label: "交付就绪度",
+      label: "交付准备度",
       value: artifactCount > 0 ? "已生成摘要" : "待生成",
-      detail: artifactCount > 0 ? "当前页面已具备基础交付信息" : "请先完成一次运行或构建 Bundle",
+      detail: artifactCount > 0 ? "当前页面已有基础交付信息" : "请先完成一次运行或构建 Bundle",
       tone: artifactCount > 0 ? "success" : "warning"
     }
   ];

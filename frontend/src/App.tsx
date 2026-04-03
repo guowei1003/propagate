@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 
 import { AppSidebar } from "./components/AppSidebar";
+import { ConsoleTopbar } from "./components/ConsoleTopbar";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { CapabilitiesPage } from "./pages/CapabilitiesPage";
 import { EnvProfilesPage } from "./pages/EnvProfilesPage";
 import { RunsPage } from "./pages/RunsPage";
 import { TasksPage } from "./pages/TasksPage";
+import {
+  applyThemeToDocument,
+  getStoredThemeMode,
+  getSystemTheme,
+  persistThemeMode,
+  resolveTheme,
+  type ResolvedTheme,
+  type ThemeMode
+} from "./lib/theme";
 
 type ViewKey = "tasks" | "runs" | "capabilities" | "profiles" | "artifacts";
 
@@ -68,6 +78,8 @@ export default function App() {
     profileCount: 0,
     pendingCapabilities: 0
   });
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredThemeMode());
+  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getSystemTheme());
 
   useEffect(() => {
     const hash = window.location.hash.replace("#", "") as ViewKey;
@@ -79,6 +91,41 @@ export default function App() {
   useEffect(() => {
     window.location.hash = view;
   }, [view]);
+
+  useEffect(() => {
+    if (themeMode === "system") {
+      setSystemTheme(getSystemTheme());
+    }
+  }, [themeMode]);
+
+  useEffect(() => {
+    if (themeMode !== "system") {
+      return;
+    }
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      setSystemTheme(event.matches ? "dark" : "light");
+    };
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", handleChange);
+      return () => media.removeEventListener("change", handleChange);
+    }
+
+    media.addListener(handleChange);
+    return () => media.removeListener(handleChange);
+  }, [themeMode]);
+
+  useEffect(() => {
+    persistThemeMode(themeMode);
+  }, [themeMode]);
+
+  const resolvedTheme = resolveTheme(themeMode, systemTheme);
+
+  useEffect(() => {
+    applyThemeToDocument(resolvedTheme);
+  }, [resolvedTheme]);
 
   const currentView = views.find((item) => item.key === view) || views[0];
 
@@ -96,15 +143,25 @@ export default function App() {
         views={views}
         onChange={(nextView) => setView(nextView as ViewKey)}
       />
-      <main className="workspace">
-        <div key={view} className="workspace-transition">
-          {view === "tasks" && <TasksPage meta={currentView} onNavigate={setView} onStatsChange={handleStatsChange} />}
-          {view === "runs" && <RunsPage meta={currentView} onStatsChange={handleStatsChange} />}
-          {view === "capabilities" && <CapabilitiesPage meta={currentView} onStatsChange={handleStatsChange} />}
-          {view === "profiles" && <EnvProfilesPage meta={currentView} onStatsChange={handleStatsChange} />}
-          {view === "artifacts" && <ArtifactsPage meta={currentView} onStatsChange={handleStatsChange} />}
-        </div>
-      </main>
+      <div className="workspace-shell">
+        <ConsoleTopbar
+          eyebrow={currentView.eyebrow}
+          title={currentView.title}
+          description={currentView.description}
+          themeMode={themeMode}
+          resolvedTheme={resolvedTheme}
+          onThemeModeChange={setThemeMode}
+        />
+        <main className="workspace">
+          <div key={view} className="workspace-transition">
+            {view === "tasks" && <TasksPage meta={currentView} onNavigate={setView} onStatsChange={handleStatsChange} />}
+            {view === "runs" && <RunsPage meta={currentView} onStatsChange={handleStatsChange} />}
+            {view === "capabilities" && <CapabilitiesPage meta={currentView} onStatsChange={handleStatsChange} />}
+            {view === "profiles" && <EnvProfilesPage meta={currentView} onStatsChange={handleStatsChange} />}
+            {view === "artifacts" && <ArtifactsPage meta={currentView} onStatsChange={handleStatsChange} />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

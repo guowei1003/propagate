@@ -34,7 +34,7 @@ export function ProfileFormPanel({ form, editingId, isSubmitting, onChange, onSu
       description="把基础接入、模型策略、执行限制和开关统一收束在一个运行配置台里。"
       tone="accent"
     >
-      <div className="form-grid">
+      <div className="form-grid profile-form-panel">
         <section className="form-group">
           <div className="form-group__header">
             <strong>基础接入</strong>

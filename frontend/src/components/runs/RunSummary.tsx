@@ -35,7 +35,11 @@ export function RunSummary({ item, runOptions, activeRunId, isResuming, onSelect
       tone="accent"
       actions={<StatusBadge label={runStatus.label} tone={runStatus.tone} />}
     >
-      <div className="stack">
+      <div className="stack run-summary-panel">
+        <div className="summary-banner">
+          <strong>{item.title || "未命名任务"}</strong>
+          <span>{item.env_profile?.name || "未绑定环境"}</span>
+        </div>
         <div className="run-summary-selector">
           <label htmlFor="run-selector">监控目标</label>
           <select

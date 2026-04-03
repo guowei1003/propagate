@@ -38,10 +38,10 @@ export function CapabilityReviewList({ items, pendingDecisionId, onDecision }: P
                 <div className="capability-card__header">
                   <div className="capability-card__title">
                     <strong>{item.name}</strong>
-                    <div className="task-row__meta">
-                      <span>类型：{item.type}</span>
-                      <span>状态：{item.status}</span>
-                      <span>风险值：{item.risk_score}</span>
+                    <div className="meta-chip-list task-row__meta">
+                      <span className="meta-chip">类型：{item.type}</span>
+                      <span className="meta-chip">状态：{item.status}</span>
+                      <span className="meta-chip">风险值：{item.risk_score}</span>
                     </div>
                   </div>
                   <StatusBadge label={riskMeta.label} tone={riskMeta.tone} />

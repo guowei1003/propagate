@@ -91,32 +91,42 @@ export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
     <PanelFrame
       title="任务检视区"
       description="在这里判断当前任务是否需要补充信息、切换监控或继续等待系统推进。"
-      actions={<StatusBadge label={statusMeta.label} tone={statusMeta.tone} />}
     >
       <div className="stack">
         {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
 
-        <KeyValueGrid
-          items={[
-            { label: "任务名称", value: task.title || "未命名任务" },
-            { label: "当前阶段", value: getPhaseLabel(task.current_phase) },
-            { label: "绑定环境", value: task.env_profile?.name || "未绑定环境" },
-            { label: "子任务数量", value: String(task.subtasks?.length || 0) }
-          ]}
-        />
-
-        <div className="inspector-note">{getNextActionText(task)}</div>
-
-        {task.status === "RUNNING" ? (
-          <div className="inline-actions">
-            <button className="btn btn--primary" type="button" onClick={onNavigateRuns}>
-              进入执行流监控
-            </button>
+        <section className="inspector-section">
+          <div className="task-inspector__hero">
+            <div className="task-inspector__hero-copy">
+              <strong>{task.title || "未命名任务"}</strong>
+              <p>{task.env_profile?.name || "未绑定环境"}</p>
+            </div>
+            <StatusBadge label={statusMeta.label} tone={statusMeta.tone} />
           </div>
-        ) : null}
+          <KeyValueGrid
+            items={[
+              { label: "任务名称", value: task.title || "未命名任务" },
+              { label: "当前阶段", value: getPhaseLabel(task.current_phase) },
+              { label: "绑定环境", value: task.env_profile?.name || "未绑定环境" },
+              { label: "子任务数量", value: String(task.subtasks?.length || 0) }
+            ]}
+          />
+        </section>
+
+        <section className="inspector-section">
+          <strong>下一步动作</strong>
+          <div className="inspector-note">{getNextActionText(task)}</div>
+          {task.status === "RUNNING" ? (
+            <div className="inline-actions">
+              <button className="btn btn--primary" type="button" onClick={onNavigateRuns}>
+                进入执行流监控
+              </button>
+            </div>
+          ) : null}
+        </section>
 
         {pendingRound ? (
-          <section className="form-group">
+          <section className="form-group inspector-section">
             <div className="form-group__header">
               <strong>澄清问答</strong>
               <p>系统已经停在待补充阶段，请先回答当前问题，任务才会继续推进。</p>
@@ -146,7 +156,7 @@ export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
           </section>
         ) : null}
 
-        <section className="stack">
+        <section className="inspector-section">
           <strong>子任务清单</strong>
           {(task.subtasks || []).length === 0 ? (
             <div className="inspector-note">任务还没有进入子任务执行阶段。</div>
@@ -167,7 +177,9 @@ export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
           )}
         </section>
 
-        <RawJsonBlock title="查看原始需求" data={task.requirement || {}} />
+        <section className="inspector-section">
+          <RawJsonBlock title="查看原始需求" data={task.requirement || {}} />
+        </section>
       </div>
     </PanelFrame>
   );

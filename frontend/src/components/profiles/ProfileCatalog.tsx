@@ -51,17 +51,17 @@ export function ProfileCatalog({
               <div className="profile-card__header">
                 <div className="profile-card__title">
                   <strong>{item.name}</strong>
-                  <div className="profile-card__meta">
-                    <span>{getProviderLabel(item.provider_type)}</span>
-                    <span>default: {item.default_model}</span>
-                    <span>review: {item.review_model || "-"}</span>
-                    <span>test: {item.test_model || "-"}</span>
-                    <span>capability: {item.capability_generation_model || "-"}</span>
-                    <span>report: {item.report_model || "-"}</span>
-                    <span>timeout: {item.default_timeout_sec}</span>
-                    <span>retries: {item.max_retries}</span>
-                    <span>concurrency: {item.max_concurrency}</span>
-                    <span>key: {item.api_key_masked || "-"}</span>
+                  <div className="meta-chip-list profile-card__meta">
+                    <span className="meta-chip">{getProviderLabel(item.provider_type)}</span>
+                    <span className="meta-chip">default: {item.default_model}</span>
+                    <span className="meta-chip">review: {item.review_model || "-"}</span>
+                    <span className="meta-chip">test: {item.test_model || "-"}</span>
+                    <span className="meta-chip">capability: {item.capability_generation_model || "-"}</span>
+                    <span className="meta-chip">report: {item.report_model || "-"}</span>
+                    <span className="meta-chip">timeout: {item.default_timeout_sec}</span>
+                    <span className="meta-chip">retries: {item.max_retries}</span>
+                    <span className="meta-chip">concurrency: {item.max_concurrency}</span>
+                    <span className="meta-chip">key: {item.api_key_masked || "-"}</span>
                   </div>
                 </div>
               </div>
@@ -80,7 +80,9 @@ export function ProfileCatalog({
                 </button>
               </div>
 
-              {validationMessageById[item.id] ? <div className="inspector-note">{validationMessageById[item.id]}</div> : null}
+              {validationMessageById[item.id] ? (
+                <div className="profile-validation-note">{validationMessageById[item.id]}</div>
+              ) : null}
             </article>
           ))}
         </div>

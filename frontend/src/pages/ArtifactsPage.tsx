@@ -71,7 +71,7 @@ export function ArtifactsPage({ meta, onStatsChange }: Props) {
   }
 
   return (
-    <section className="page-section">
+    <section className="page-section artifacts-layout">
       <PageHeader
         eyebrow={meta.eyebrow}
         title={meta.title}

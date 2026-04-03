@@ -31,9 +31,9 @@ export function DependencyList({ dependencies, subtasks }: Props) {
         <div className="dependency-list">
           {dependencies.map((dependency, index) => (
             <article key={`${dependency.from_sub_task_id}-${dependency.to_sub_task_id}-${index}`} className="dependency-link">
-              <span>{subtaskMap.get(dependency.from_sub_task_id) || dependency.from_sub_task_id}</span>
-              <span>→</span>
-              <span>{subtaskMap.get(dependency.to_sub_task_id) || dependency.to_sub_task_id}</span>
+              <span className="dependency-node">{subtaskMap.get(dependency.from_sub_task_id) || dependency.from_sub_task_id}</span>
+              <span className="dependency-link__arrow">→</span>
+              <span className="dependency-node">{subtaskMap.get(dependency.to_sub_task_id) || dependency.to_sub_task_id}</span>
             </article>
           ))}
         </div>

@@ -24,7 +24,7 @@ export function SubtaskBoard({ subtasks }: Props) {
           aside="等待任务进入执行阶段"
         />
       ) : (
-        <div className="subtask-list">
+        <div className="subtask-board">
           {subtasks.map((subtask) => {
             const meta = getSubtaskStatusMeta(subtask.status);
             return (

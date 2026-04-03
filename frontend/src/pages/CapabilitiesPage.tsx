@@ -60,7 +60,7 @@ export function CapabilitiesPage({ meta, onStatsChange }: Props) {
   }
 
   return (
-    <section className="page-section">
+    <section className="page-section capabilities-layout">
       <PageHeader eyebrow={meta.eyebrow} title={meta.title} description={meta.description} />
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
       <MetricStrip items={buildCapabilityMetrics(items)} />

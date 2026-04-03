@@ -103,7 +103,7 @@ export function RunsPage({ meta, onStatsChange }: Props) {
   const activeRunStatus = getTaskStatusMeta(activeItem?.run?.status || "");
 
   return (
-    <section className="page-section">
+    <section className="page-section runs-layout">
       <PageHeader
         eyebrow={meta.eyebrow}
         title={meta.title}
@@ -119,8 +119,8 @@ export function RunsPage({ meta, onStatsChange }: Props) {
           aside={isRefreshing ? "正在检查运行状态" : "等待任务进入运行阶段"}
         />
       ) : (
-        <div className="workspace-grid">
-          <div className="primary-column">
+        <div className="runs-console-grid">
+          <div className="runs-console-grid__main">
             <RunSummary
               item={activeItem}
               runOptions={runnableItems.map((item) => ({ id: item.run!.id, title: item.title || item.run!.id }))}
@@ -133,7 +133,7 @@ export function RunsPage({ meta, onStatsChange }: Props) {
             <SubtaskBoard subtasks={activeItem.subtasks || []} />
             <DependencyList dependencies={activeItem.dependencies || []} subtasks={activeItem.subtasks || []} />
           </div>
-          <div className="inspector-column">
+          <div className="runs-console-grid__side">
             <EventStream events={activeItem.events || []} highlightId={latestEventId} />
           </div>
         </div>

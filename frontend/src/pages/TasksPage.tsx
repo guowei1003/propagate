@@ -116,8 +116,8 @@ export function TasksPage({ meta, onNavigate, onStatsChange }: Props) {
       <PageHeader eyebrow={meta.eyebrow} title={meta.title} description={meta.description} />
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
       <MetricStrip items={buildTaskMetrics(tasks, profiles, selectedTask)} />
-      <div className="workspace-grid">
-        <div className="primary-column">
+      <div className="tasks-console-grid">
+        <div className="tasks-console-grid__composer">
           <TaskComposer
             profiles={profiles}
             prompt={prompt}
@@ -130,6 +130,8 @@ export function TasksPage({ meta, onNavigate, onStatsChange }: Props) {
             onNavigateProfiles={() => onNavigate("profiles")}
             onSubmit={() => void handleSubmit()}
           />
+        </div>
+        <div className="tasks-console-grid__queue">
           <TaskQueue
             tasks={tasks}
             selectedTaskId={selectedTask?.id || ""}
@@ -138,7 +140,7 @@ export function TasksPage({ meta, onNavigate, onStatsChange }: Props) {
             onNavigateRuns={() => onNavigate("runs")}
           />
         </div>
-        <div className="inspector-column">
+        <div className="tasks-console-grid__inspector">
           <TaskInspector
             task={selectedTask}
             onNavigateRuns={() => onNavigate("runs")}

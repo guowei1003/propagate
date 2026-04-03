@@ -44,11 +44,17 @@ export function ArtifactBundlePanel({ runId, taskTitle, artifacts, isBuilding, o
       <div className="stack">
         <article className="artifact-summary">
           <div className="artifact-summary__header">
-            <div className="artifact-summary__meta">
-              <span>任务：{taskTitle || "未命名任务"}</span>
-              <span>
+            <div className="artifact-summary__headline">
+              <strong>{taskTitle || "未命名任务"}</strong>
+              <div className="meta-chip-list artifact-summary__meta">
+                <span className="meta-chip">任务：{taskTitle || "未命名任务"}</span>
+                <span className="meta-chip">
+                  {isBuilding ? "构建状态：进行中" : "构建状态：可操作"}
+                </span>
+                <span className="meta-chip">
                 Run：<code>{runId}</code>
-              </span>
+                </span>
+              </div>
             </div>
           </div>
           <div className="artifact-summary__actions">

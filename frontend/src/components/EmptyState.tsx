@@ -10,7 +10,7 @@ type Props = {
 export function EmptyState({ title, description, action, aside }: Props) {
   return (
     <div className="empty-state">
-      <p className="empty-state__eyebrow">默认态</p>
+      <p className="empty-state__eyebrow">空状态</p>
       <h3>{title}</h3>
       <p>{description}</p>
       {action ? <div className="empty-state__action">{action}</div> : null}

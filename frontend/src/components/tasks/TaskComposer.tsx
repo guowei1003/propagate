@@ -41,6 +41,8 @@ export function TaskComposer({
   onSubmit
 }: Props) {
   const [showOverrides, setShowOverrides] = useState(false);
+  const selectedProfile = profiles.find((item) => item.id === envProfileId) || profiles[0] || null;
+  const activeOverrideCount = Object.values(modelOverrides).filter((value) => value.trim()).length;
 
   if (profiles.length === 0) {
     return (
@@ -70,7 +72,13 @@ export function TaskComposer({
         </button>
       }
     >
-      <div className="form-grid">
+      <div className="form-grid task-composer">
+        <div className="task-composer__summary">
+          <span className="pill-note">环境：{selectedProfile?.name || "未选择"}</span>
+          <span className="pill-note">
+            {showOverrides ? `模型覆盖 ${activeOverrideCount} 项` : "默认使用环境模型"}
+          </span>
+        </div>
         <section className="form-group">
           <div className="form-group__header">
             <strong>基础任务信息</strong>
@@ -154,7 +162,7 @@ export function TaskComposer({
           <button className="btn btn--primary" disabled={isSubmitting || !prompt.trim()} type="button" onClick={onSubmit}>
             {isSubmitting ? "任务启动中..." : "启动任务编排"}
           </button>
-          <span className="pill-note">创建后会自动刷新任务队列</span>
+          <span className="pill-note">创建后自动刷新队列与检视区</span>
         </div>
       </div>
     </PanelFrame>

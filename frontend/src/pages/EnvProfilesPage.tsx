@@ -149,7 +149,7 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
   }
 
   return (
-    <section className="page-section">
+    <section className="page-section profiles-layout">
       <PageHeader
         eyebrow={meta.eyebrow}
         title={meta.title}
@@ -163,8 +163,8 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
       />
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
       <MetricStrip items={buildProfileMetrics(items, editingId)} />
-      <div className="workspace-grid">
-        <div className="primary-column">
+      <div className="profiles-console-grid">
+        <div className="profiles-console-grid__form">
           <form onSubmit={(event) => void handleSubmit(event)}>
             <ProfileFormPanel
               form={form}
@@ -175,7 +175,7 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
             />
           </form>
         </div>
-        <div className="inspector-column">
+        <div className="profiles-console-grid__catalog">
           <ProfileCatalog
             items={items}
             validationMessageById={validationMessageById}

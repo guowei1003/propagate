@@ -1,9 +1,42 @@
-.tasks-layout .panel-frame:first-child {
-  min-height: 100%;
+.tasks-console-grid,
+.runs-console-grid,
+.profiles-console-grid {
+  display: grid;
+  gap: var(--space-6);
 }
 
-.tasks-layout .inspector-column {
-  position: relative;
+.tasks-console-grid {
+  grid-template-columns: 360px minmax(0, 1fr) 380px;
+  align-items: start;
+}
+
+.runs-console-grid {
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+  align-items: start;
+}
+
+.profiles-console-grid {
+  grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
+  align-items: start;
+}
+
+.tasks-console-grid__composer,
+.tasks-console-grid__queue,
+.tasks-console-grid__inspector,
+.runs-console-grid__main,
+.runs-console-grid__side,
+.profiles-console-grid__form,
+.profiles-console-grid__catalog {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+
+.tasks-console-grid__inspector,
+.runs-console-grid__side,
+.profiles-console-grid__catalog {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-6));
 }
 
 .run-summary-selector {
@@ -22,13 +55,40 @@
   padding-right: 4px;
 }
 
-.profile-form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
 .artifact-summary__meta code {
   font-family: var(--font-mono);
   color: var(--accent-primary-strong);
+}
+
+@media (max-width: 1439px) {
+  .tasks-console-grid {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .tasks-console-grid__inspector {
+    grid-column: 1 / -1;
+    position: static;
+  }
+}
+
+@media (max-width: 1279px) {
+  .runs-console-grid,
+  .profiles-console-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .runs-console-grid__side,
+  .profiles-console-grid__catalog {
+    position: static;
+  }
+}
+
+@media (max-width: 1023px) {
+  .tasks-console-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tasks-console-grid__inspector {
+    position: static;
+  }
 }

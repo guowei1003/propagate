@@ -39,10 +39,7 @@ export function TaskQueue({ tasks, selectedTaskId, isRefreshing, onSelect, onNav
           {tasks.map((item) => {
             const statusMeta = getTaskStatusMeta(item.status);
             return (
-              <article
-                key={item.id}
-                className={item.id === selectedTaskId ? "task-row is-active" : "task-row"}
-              >
+              <article key={item.id} className={item.id === selectedTaskId ? "task-row is-active" : "task-row"}>
                 <div className="task-row__header">
                   <div className="task-row__title">
                     <strong>{item.title || "未命名任务"}</strong>
@@ -54,13 +51,16 @@ export function TaskQueue({ tasks, selectedTaskId, isRefreshing, onSelect, onNav
                   </div>
                   <StatusBadge label={statusMeta.label} tone={statusMeta.tone} />
                 </div>
-                <div className="task-row__actions">
-                  <button className="btn btn--secondary" type="button" onClick={() => onSelect(item.id)}>
-                    查看详情
-                  </button>
-                  <button className="btn btn--ghost" type="button" onClick={onNavigateRuns}>
-                    前往监控
-                  </button>
+                <div className="task-row__footer">
+                  <span className="task-row__run">{item.run?.id ? `Run ${item.run.id}` : "未启动运行"}</span>
+                  <div className="task-row__actions">
+                    <button className="btn btn--secondary" type="button" onClick={() => onSelect(item.id)}>
+                      查看详情
+                    </button>
+                    <button className="btn btn--ghost" type="button" onClick={onNavigateRuns}>
+                      前往监控
+                    </button>
+                  </div>
                 </div>
               </article>
             );
