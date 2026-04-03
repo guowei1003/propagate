@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:8000}"
+API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:8888}"
 SMOKE_TIMEOUT_SEC="${SMOKE_TIMEOUT_SEC:-30}"
 PROFILE_NAME="smoke-demo-$(date +%s)"
 

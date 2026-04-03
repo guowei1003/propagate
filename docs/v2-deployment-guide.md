@@ -85,7 +85,7 @@ docker compose -f docker-compose.v2.yml --env-file "${PROPAGATE_DATA_ROOT}/confi
 默认暴露端口：
 
 - `8080`：前端入口
-- `8000`：API 服务
+- `8888`：API 服务
 - `5432`：PostgreSQL
 
 ### 4.2 执行迁移
@@ -109,7 +109,7 @@ export DATABASE_URL="postgresql://用户:密码@主机:5432/propagate"
 上线后至少检查以下内容：
 
 1. `http://127.0.0.1:8080/` 能打开 SPA。
-2. `http://127.0.0.1:8000/docs` 能打开 API 文档。
+2. `http://127.0.0.1:8888/docs` 能打开 API 文档。
 3. `GET /v2/env-profiles` 返回 200。
 4. 创建 demo profile 并调用 `/validate` 成功。
 5. 创建一个测试任务，能进入 `WAITING_APPROVAL` 或 `WAITING_USER_INPUT`。
@@ -127,7 +127,7 @@ export DATABASE_URL="postgresql://用户:密码@主机:5432/propagate"
 
 环境变量：
 
-- `API_BASE_URL`：默认 `http://127.0.0.1:8000`，远程或反代时请覆盖。
+- `API_BASE_URL`：默认 `http://127.0.0.1:8888`，远程或反代时请覆盖。
 - `SMOKE_TIMEOUT_SEC`：仅影响 `smoke_test.sh` 轮询超时，默认 `30`。
 
 验证结果请记录到：

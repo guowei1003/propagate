@@ -75,8 +75,8 @@ export NPM_REGISTRY='https://registry.npmjs.org/'
 
 启动后访问：
 
-- 前端入口：`http://127.0.0.1:8000/`
-- API 文档：`http://127.0.0.1:8000/docs`
+- 前端入口：`http://127.0.0.1:8888/`
+- API 文档：`http://127.0.0.1:8888/docs`
 
 如果 `frontend/dist` 尚未构建，根路径会返回一个 V2 占位页面，并提示使用 `/docs` 调试 API。
 

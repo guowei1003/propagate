@@ -12,4 +12,4 @@ export PROPAGATE_DATA_ROOT="${PROPAGATE_DATA_ROOT:-/data/propagate}"
 propagate_v2_compose "$ROOT_DIR" up --build -d
 propagate_v2_compose "$ROOT_DIR" ps
 
-echo "V2 服务已启动。前端入口：http://127.0.0.1:8080  API 文档：http://127.0.0.1:8000/docs"
+echo "V2 服务已启动。前端入口：http://127.0.0.1:8080  API 文档：http://127.0.0.1:8888/docs"
