@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/lib/api.ts","./src/lib/events.ts","./src/pages/artifactspage.tsx","./src/pages/capabilitiespage.tsx","./src/pages/envprofilespage.tsx","./src/pages/runspage.tsx","./src/pages/taskdetailpage.tsx","./src/pages/taskspage.tsx"],"version":"5.9.3"}
