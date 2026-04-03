@@ -37,7 +37,7 @@ python3 scripts/run_api.py
 4. Open the V2 entry:
 
 ```text
-http://127.0.0.1:8888/
+http://127.0.0.1:8000/
 ```
 
 ## Frontend Setup
