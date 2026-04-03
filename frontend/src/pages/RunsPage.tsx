@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 
-import { getJson, postJson } from "../lib/api";
+import { MetricStrip } from "../components/MetricStrip";
+import { PageHeader } from "../components/PageHeader";
+import { DependencyList } from "../components/runs/DependencyList";
+import { EventStream } from "../components/runs/EventStream";
+import { RunSummary } from "../components/runs/RunSummary";
+import { SubtaskBoard } from "../components/runs/SubtaskBoard";
+import { EmptyState } from "../components/EmptyState";
+import { StatusBadge } from "../components/StatusBadge";
+import { getErrorMessage, getJson, postJson } from "../lib/api";
 import { subscribeRunEvents } from "../lib/events";
+import { buildRunMetrics, getTaskStatusMeta } from "../lib/presenters";
 
 type RunEvent = {
   id: string;
@@ -19,21 +28,54 @@ type TaskDetails = {
   events?: RunEvent[];
 };
 
-export function RunsPage() {
+type Props = {
+  meta: {
+    eyebrow: string;
+    title: string;
+    description: string;
+  };
+  onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
+};
+
+export function RunsPage({ meta, onStatsChange }: Props) {
   const [items, setItems] = useState<TaskDetails[]>([]);
   const [activeRunId, setActiveRunId] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [latestEventId, setLatestEventId] = useState("");
+
+  async function refresh(preferredRunId?: string) {
+    setIsRefreshing(true);
+    setErrorMessage("");
+
+    try {
+      const tasks = await getJson<TaskDetails[]>("/v2/tasks");
+      const detailed = await Promise.all(tasks.map((item) => getJson<TaskDetails>(`/v2/tasks/${item.id}`)));
+      const availableRunIds = detailed.flatMap((item) => (item.run?.id ? [item.run.id] : []));
+      const nextRunId =
+        (preferredRunId && availableRunIds.includes(preferredRunId) && preferredRunId) ||
+        (activeRunId && availableRunIds.includes(activeRunId) && activeRunId) ||
+        availableRunIds[0] ||
+        "";
+      setItems(detailed);
+      setActiveRunId(nextRunId);
+      onStatsChange({ taskCount: detailed.length });
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
 
   useEffect(() => {
-    void getJson<TaskDetails[]>("/v2/tasks").then(async (tasks) => {
-      const detailed = await Promise.all(tasks.map((item) => getJson<TaskDetails>(`/v2/tasks/${item.id}`)));
-      setItems(detailed);
-      setActiveRunId(detailed.find((item) => item.run?.id)?.run?.id || "");
-    });
+    void refresh();
   }, []);
 
   useEffect(() => {
     if (!activeRunId) return;
     return subscribeRunEvents(activeRunId, (payload) => {
+      setLatestEventId(payload.id);
       setItems((current) =>
         current.map((item) => {
           if (item.run?.id !== activeRunId) return item;
@@ -44,40 +86,58 @@ export function RunsPage() {
   }, [activeRunId]);
 
   async function handleResume(runId: string) {
-    await postJson(`/v2/runs/${runId}/resume`, {});
-    const tasks = await getJson<TaskDetails[]>("/v2/tasks");
-    const detailed = await Promise.all(tasks.map((item) => getJson<TaskDetails>(`/v2/tasks/${item.id}`)));
-    setItems(detailed);
+    setIsResuming(true);
+    setErrorMessage("");
+    try {
+      await postJson(`/v2/runs/${runId}/resume`, {});
+      await refresh(runId);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsResuming(false);
+    }
   }
 
+  const runnableItems = items.filter((item) => item.run?.id);
+  const activeItem = runnableItems.find((item) => item.run?.id === activeRunId) || runnableItems[0] || null;
+  const activeRunStatus = getTaskStatusMeta(activeItem?.run?.status || "");
+
   return (
-    <section className="panel">
-      <h2>运行监控</h2>
-      <div className="stack">
-        {items.map((item) => (
-          <div key={item.id} className="card">
-            <strong>{item.title}</strong>
-            <span>Run: {item.run?.id || "-"}</span>
-            <span>Status: {item.run?.status || "-"}</span>
-            <span>Phase: {item.run?.current_phase || "-"}</span>
-            <span>Profile: {item.env_profile?.name || "-"}</span>
-            <span>Default Model: {item.env_profile?.default_model || "-"}</span>
-            <pre>{JSON.stringify(item.dependencies || [], null, 2)}</pre>
-            <pre>{JSON.stringify(item.subtasks || [], null, 2)}</pre>
-            <pre>{JSON.stringify(item.events || [], null, 2)}</pre>
-            {item.run?.id && (
-              <div className="actions">
-                <button type="button" onClick={() => setActiveRunId(item.run!.id)}>
-                  订阅事件
-                </button>
-                <button type="button" onClick={() => void handleResume(item.run!.id)}>
-                  恢复执行
-                </button>
-              </div>
-            )}
+    <section className="page-section">
+      <PageHeader
+        eyebrow={meta.eyebrow}
+        title={meta.title}
+        description={meta.description}
+        actions={activeItem ? <StatusBadge label={`当前订阅：${activeRunStatus.label}`} tone={activeRunStatus.tone} /> : undefined}
+      />
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+      <MetricStrip items={buildRunMetrics(items, activeItem)} />
+      {!activeItem ? (
+        <EmptyState
+          title="还没有可监控的运行"
+          description="当任务进入运行阶段后，这里会显示运行摘要、依赖关系和实时事件流。"
+          aside={isRefreshing ? "正在检查运行状态" : "等待任务进入运行阶段"}
+        />
+      ) : (
+        <div className="workspace-grid">
+          <div className="primary-column">
+            <RunSummary
+              item={activeItem}
+              runOptions={runnableItems.map((item) => ({ id: item.run!.id, title: item.title || item.run!.id }))}
+              activeRunId={activeItem.run?.id || ""}
+              isResuming={isResuming}
+              onSelectRun={setActiveRunId}
+              onSubscribe={() => setActiveRunId(activeItem.run!.id)}
+              onResume={() => void handleResume(activeItem.run!.id)}
+            />
+            <SubtaskBoard subtasks={activeItem.subtasks || []} />
+            <DependencyList dependencies={activeItem.dependencies || []} subtasks={activeItem.subtasks || []} />
           </div>
-        ))}
-      </div>
+          <div className="inspector-column">
+            <EventStream events={activeItem.events || []} highlightId={latestEventId} />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

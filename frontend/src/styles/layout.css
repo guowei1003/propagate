@@ -1,0 +1,151 @@
+.app-shell {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar-rail {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-height: 100vh;
+  padding: var(--space-8);
+  border-right: 1px solid var(--line-subtle);
+  background: linear-gradient(180deg, rgba(17, 23, 34, 0.94), rgba(10, 14, 20, 0.92));
+  backdrop-filter: blur(18px);
+}
+
+.sidebar-section {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.workspace {
+  width: 100%;
+  max-width: var(--content-max);
+  padding: var(--space-8);
+  margin: 0 auto;
+}
+
+.workspace-transition {
+  animation: workspace-enter var(--transition-base);
+}
+
+@keyframes workspace-enter {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-section {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.92fr);
+  gap: var(--space-6);
+}
+
+.primary-column,
+.inspector-column {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.page-header__copy {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 820px;
+}
+
+.page-header__copy h2 {
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.page-header__copy p {
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.page-eyebrow,
+.brand-kicker,
+.sidebar-mini-label,
+.empty-state__eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+}
+
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+@media (max-width: 1359px) {
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-rail {
+    position: static;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+
+  .sidebar-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 639px) {
+  .workspace {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .metric-strip,
+  .sidebar-nav {
+    grid-template-columns: 1fr;
+  }
+}

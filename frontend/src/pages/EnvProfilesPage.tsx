@@ -1,6 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 
-import { getJson, postJson, putJson } from "../lib/api";
+import { MetricStrip } from "../components/MetricStrip";
+import { PageHeader } from "../components/PageHeader";
+import { ProfileCatalog } from "../components/profiles/ProfileCatalog";
+import { ProfileFormPanel } from "../components/profiles/ProfileFormPanel";
+import { StatusBadge } from "../components/StatusBadge";
+import { getErrorMessage, getJson, postJson, putJson } from "../lib/api";
+import { buildProfileMetrics } from "../lib/presenters";
 
 type EnvProfile = {
   id: string;
@@ -39,146 +45,146 @@ const initialForm = {
   enable_auto_sub_agents: true
 };
 
-export function EnvProfilesPage() {
+type Props = {
+  meta: {
+    eyebrow: string;
+    title: string;
+    description: string;
+  };
+  onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
+};
+
+export function EnvProfilesPage({ meta, onStatsChange }: Props) {
   const [items, setItems] = useState<EnvProfile[]>([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState("");
   const [validationMessageById, setValidationMessageById] = useState<Record<string, string>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingValidationId, setPendingValidationId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function refresh() {
-    setItems(await getJson<EnvProfile[]>("/v2/env-profiles"));
+    setIsRefreshing(true);
+    setErrorMessage("");
+
+    try {
+      const profileItems = await getJson<EnvProfile[]>("/v2/env-profiles");
+      setItems(profileItems);
+      onStatsChange({ profileCount: profileItems.length });
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
   }
 
   useEffect(() => {
     void refresh();
   }, []);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (editingId) {
-      await putJson(`/v2/env-profiles/${editingId}`, form);
-    } else {
-      await postJson("/v2/env-profiles", form);
+  async function handleSubmit(event?: FormEvent) {
+    event?.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      if (editingId) {
+        await putJson(`/v2/env-profiles/${editingId}`, form);
+      } else {
+        await postJson("/v2/env-profiles", form);
+      }
+      setForm(initialForm);
+      setEditingId("");
+      await refresh();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
     }
-    setForm(initialForm);
-    setEditingId("");
-    await refresh();
   }
 
   async function handleValidate(id: string) {
-    const result = await postJson<{ message: string }>(`/v2/env-profiles/${id}/validate`, {});
-    setValidationMessageById((current) => ({ ...current, [id]: result.message }));
+    setPendingValidationId(id);
+    setErrorMessage("");
+    try {
+      const result = await postJson<{ message: string }>(`/v2/env-profiles/${id}/validate`, {});
+      setValidationMessageById((current) => ({ ...current, [id]: result.message }));
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setPendingValidationId("");
+    }
   }
 
   async function handleEdit(id: string) {
-    const detail = await getJson<EnvProfile>(`/v2/env-profiles/${id}`);
-    setEditingId(id);
-    setForm({
-      name: detail.name,
-      provider_type: detail.provider_type,
-      api_base_url: detail.api_base_url,
-      api_key: "",
-      default_model: detail.default_model,
-      review_model: detail.review_model,
-      test_model: detail.test_model,
-      capability_generation_model: detail.capability_generation_model,
-      report_model: detail.report_model,
-      temperature: detail.temperature,
-      default_timeout_sec: detail.default_timeout_sec,
-      max_retries: detail.max_retries,
-      max_concurrency: detail.max_concurrency,
-      enable_docker_sandbox: detail.enable_docker_sandbox,
-      enable_auto_sub_agents: detail.enable_auto_sub_agents
-    });
+    setErrorMessage("");
+    try {
+      const detail = await getJson<EnvProfile>(`/v2/env-profiles/${id}`);
+      setEditingId(id);
+      setForm({
+        name: detail.name,
+        provider_type: detail.provider_type,
+        api_base_url: detail.api_base_url,
+        api_key: "",
+        default_model: detail.default_model,
+        review_model: detail.review_model,
+        test_model: detail.test_model,
+        capability_generation_model: detail.capability_generation_model,
+        report_model: detail.report_model,
+        temperature: detail.temperature,
+        default_timeout_sec: detail.default_timeout_sec,
+        max_retries: detail.max_retries,
+        max_concurrency: detail.max_concurrency,
+        enable_docker_sandbox: detail.enable_docker_sandbox,
+        enable_auto_sub_agents: detail.enable_auto_sub_agents
+      });
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    }
+  }
+
+  function handleFormChange<K extends keyof typeof initialForm>(key: K, value: (typeof initialForm)[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
   }
 
   return (
-    <section className="panel-grid">
-      <article className="panel">
-        <h2>{editingId ? "编辑环境配置" : "新增环境配置"}</h2>
-        <form className="form" onSubmit={(event) => void handleSubmit(event)}>
-          <label>
-            名称
-            <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-          </label>
-          <label>
-            Provider
-            <select value={form.provider_type} onChange={(event) => setForm({ ...form, provider_type: event.target.value })}>
-              <option value="demo">demo</option>
-              <option value="openai_compatible">openai_compatible</option>
-            </select>
-          </label>
-          <label>
-            Default Model
-            <input value={form.default_model} onChange={(event) => setForm({ ...form, default_model: event.target.value })} />
-          </label>
-          <label>
-            API Base URL
-            <input value={form.api_base_url} onChange={(event) => setForm({ ...form, api_base_url: event.target.value })} />
-          </label>
-          <label>
-            API Key
-            <input value={form.api_key} onChange={(event) => setForm({ ...form, api_key: event.target.value })} />
-          </label>
-          <label>
-            Temperature
-            <input type="number" step="0.1" value={form.temperature} onChange={(event) => setForm({ ...form, temperature: Number(event.target.value) })} />
-          </label>
-          <label>
-            Default Timeout
-            <input type="number" value={form.default_timeout_sec} onChange={(event) => setForm({ ...form, default_timeout_sec: Number(event.target.value) })} />
-          </label>
-          <label>
-            Max Retries
-            <input type="number" value={form.max_retries} onChange={(event) => setForm({ ...form, max_retries: Number(event.target.value) })} />
-          </label>
-          <label>
-            Max Concurrency
-            <input type="number" value={form.max_concurrency} onChange={(event) => setForm({ ...form, max_concurrency: Number(event.target.value) })} />
-          </label>
-          <label>
-            Docker Sandbox
-            <input type="checkbox" checked={form.enable_docker_sandbox} onChange={(event) => setForm({ ...form, enable_docker_sandbox: event.target.checked })} />
-          </label>
-          <label>
-            Auto Sub Agents
-            <input type="checkbox" checked={form.enable_auto_sub_agents} onChange={(event) => setForm({ ...form, enable_auto_sub_agents: event.target.checked })} />
-          </label>
-          <button type="submit">保存配置</button>
-        </form>
-      </article>
-      <article className="panel">
-        <h2>已配置环境</h2>
-        <div className="stack">
-          {items.map((item) => (
-            <div key={item.id} className="card">
-              <strong>{item.name}</strong>
-              <span>{item.provider_type}</span>
-              <span>default: {item.default_model}</span>
-              <span>review: {item.review_model || "-"}</span>
-              <span>test: {item.test_model || "-"}</span>
-              <span>capability: {item.capability_generation_model || "-"}</span>
-              <span>report: {item.report_model || "-"}</span>
-              <span>timeout: {item.default_timeout_sec}</span>
-              <span>retries: {item.max_retries}</span>
-              <span>concurrency: {item.max_concurrency}</span>
-              <span>key: {item.api_key_masked || "-"}</span>
-              <div className="actions">
-                <button
-                  type="button"
-                  onClick={() => void handleEdit(item.id)}
-                >
-                  编辑
-                </button>
-                <button type="button" onClick={() => void handleValidate(item.id)}>
-                  校验
-                </button>
-              </div>
-              {validationMessageById[item.id] && <p>{validationMessageById[item.id]}</p>}
-            </div>
-          ))}
+    <section className="page-section">
+      <PageHeader
+        eyebrow={meta.eyebrow}
+        title={meta.title}
+        description={meta.description}
+        actions={
+          <StatusBadge
+            label={editingId ? "正在编辑" : "新增环境配置"}
+            tone={editingId ? "warning" : "info"}
+          />
+        }
+      />
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+      <MetricStrip items={buildProfileMetrics(items, editingId)} />
+      <div className="workspace-grid">
+        <div className="primary-column">
+          <form onSubmit={(event) => void handleSubmit(event)}>
+            <ProfileFormPanel
+              form={form}
+              editingId={editingId}
+              isSubmitting={isSubmitting}
+              onChange={handleFormChange}
+              onSubmit={() => void handleSubmit()}
+            />
+          </form>
         </div>
-      </article>
+        <div className="inspector-column">
+          <ProfileCatalog
+            items={items}
+            validationMessageById={validationMessageById}
+            pendingValidationId={pendingValidationId}
+            onEdit={(id) => void handleEdit(id)}
+            onValidate={(id) => void handleValidate(id)}
+          />
+        </div>
+      </div>
     </section>
   );
 }

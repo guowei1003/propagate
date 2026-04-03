@@ -1,44 +1,97 @@
 import { useEffect, useState } from "react";
 
-import { getJson, postJson } from "../lib/api";
+import { ArtifactBundlePanel } from "../components/artifacts/ArtifactBundlePanel";
+import { MetricStrip } from "../components/MetricStrip";
+import { PageHeader } from "../components/PageHeader";
+import { StatusBadge } from "../components/StatusBadge";
+import { getErrorMessage, getJson, postJson } from "../lib/api";
+import { buildArtifactMetrics } from "../lib/presenters";
 
 type TaskSummary = { id: string; title: string; run?: { id: string } | null };
 
-export function ArtifactsPage() {
+type Props = {
+  meta: {
+    eyebrow: string;
+    title: string;
+    description: string;
+  };
+  onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
+};
+
+export function ArtifactsPage({ meta, onStatsChange }: Props) {
   const [artifacts, setArtifacts] = useState<Record<string, unknown> | null>(null);
   const [runId, setRunId] = useState("");
+  const [taskTitle, setTaskTitle] = useState("");
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    void getJson<TaskSummary[]>("/v2/tasks").then(async (items) => {
-      const latestRunId = items.find((item) => item.run?.id)?.run?.id;
+  async function refresh() {
+    setIsRefreshing(true);
+    setErrorMessage("");
+
+    try {
+      const items = await getJson<TaskSummary[]>("/v2/tasks");
+      onStatsChange({ taskCount: items.length });
+      const latestTask = items.find((item) => item.run?.id);
+      const latestRunId = latestTask?.run?.id;
       if (!latestRunId) {
+        setRunId("");
+        setTaskTitle("");
+        setArtifacts(null);
         return;
       }
+
       setRunId(latestRunId);
-      setArtifacts(await getJson(`/v2/runs/${latestRunId}/artifacts`));
-    });
+      setTaskTitle(latestTask?.title || "");
+      setArtifacts(await getJson<Record<string, unknown>>(`/v2/runs/${latestRunId}/artifacts`));
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    void refresh();
   }, []);
 
   async function handleBuildBundle() {
     if (!runId) return;
-    await postJson(`/v2/runs/${runId}/bundle/build`, {});
-    setArtifacts(await getJson(`/v2/runs/${runId}/bundle`));
+    setIsBuilding(true);
+    setErrorMessage("");
+    try {
+      await postJson(`/v2/runs/${runId}/bundle/build`, {});
+      setArtifacts(await getJson<Record<string, unknown>>(`/v2/runs/${runId}/bundle`));
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsBuilding(false);
+    }
   }
 
   return (
-    <section className="panel">
-      <h2>产物中心</h2>
-      <div className="actions">
-        <button type="button" onClick={() => void handleBuildBundle()}>
-          构建 Bundle
-        </button>
-        {runId && (
-          <a href={`/v2/runs/${runId}/bundle/download`} target="_blank" rel="noreferrer">
-            下载 Bundle
-          </a>
-        )}
-      </div>
-      <pre>{JSON.stringify(artifacts, null, 2)}</pre>
+    <section className="page-section">
+      <PageHeader
+        eyebrow={meta.eyebrow}
+        title={meta.title}
+        description={meta.description}
+        actions={
+          <StatusBadge
+            label={runId ? (isBuilding ? "最近 Bundle：构建中" : "最近 Bundle：可操作") : "最近 Bundle：等待运行"}
+            tone={runId ? (isBuilding ? "warning" : "info") : "neutral"}
+          />
+        }
+      />
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+      <MetricStrip items={buildArtifactMetrics({ runId, artifacts, isBuilding })} />
+      <ArtifactBundlePanel
+        runId={runId}
+        taskTitle={taskTitle}
+        artifacts={artifacts}
+        isBuilding={isBuilding || isRefreshing}
+        onBuild={() => void handleBuildBundle()}
+      />
     </section>
   );
 }

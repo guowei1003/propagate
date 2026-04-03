@@ -1,14 +1,45 @@
 import { useEffect, useState } from "react";
 
-import { getJson, postJson } from "../lib/api";
+import { CapabilityReviewList } from "../components/capabilities/CapabilityReviewList";
+import { MetricStrip } from "../components/MetricStrip";
+import { PageHeader } from "../components/PageHeader";
+import { getErrorMessage, getJson, postJson } from "../lib/api";
+import { buildCapabilityMetrics } from "../lib/presenters";
 
 type Capability = { id: string; name: string; type: string; status: string; risk_score: number };
 
-export function CapabilitiesPage() {
+type Props = {
+  meta: {
+    eyebrow: string;
+    title: string;
+    description: string;
+  };
+  onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
+};
+
+export function CapabilitiesPage({ meta, onStatsChange }: Props) {
   const [items, setItems] = useState<Capability[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pendingDecisionId, setPendingDecisionId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function refresh() {
-    setItems(await getJson<Capability[]>("/v2/capabilities"));
+    setIsRefreshing(true);
+    setErrorMessage("");
+
+    try {
+      const capabilityItems = await getJson<Capability[]>("/v2/capabilities");
+      setItems(capabilityItems);
+      onStatsChange({
+        pendingCapabilities: capabilityItems.filter(
+          (item) => !["approved", "rejected", "APPROVED", "REJECTED"].includes(item.status)
+        ).length
+      });
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
   }
 
   useEffect(() => {
@@ -16,31 +47,28 @@ export function CapabilitiesPage() {
   }, []);
 
   async function handleDecision(id: string, action: "approve" | "reject") {
-    await postJson(`/v2/capabilities/${id}/${action}`, { approver: "ui-user", comment: "" });
-    await refresh();
+    setPendingDecisionId(id);
+    setErrorMessage("");
+    try {
+      await postJson(`/v2/capabilities/${id}/${action}`, { approver: "ui-user", comment: "" });
+      await refresh();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setPendingDecisionId("");
+    }
   }
 
   return (
-    <section className="panel">
-      <h2>能力中心</h2>
-      <div className="stack">
-        {items.map((item) => (
-          <div key={item.id} className="card">
-            <strong>{item.name}</strong>
-            <span>Type: {item.type}</span>
-            <span>Status: {item.status}</span>
-            <span>Risk: {item.risk_score}</span>
-            <div className="actions">
-              <button type="button" onClick={() => void handleDecision(item.id, "approve")}>
-                审批通过
-              </button>
-              <button type="button" onClick={() => void handleDecision(item.id, "reject")}>
-                驳回
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+    <section className="page-section">
+      <PageHeader eyebrow={meta.eyebrow} title={meta.title} description={meta.description} />
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+      <MetricStrip items={buildCapabilityMetrics(items)} />
+      <CapabilityReviewList
+        items={items}
+        pendingDecisionId={pendingDecisionId || (isRefreshing ? "refreshing" : "")}
+        onDecision={(id, action) => void handleDecision(id, action)}
+      />
     </section>
   );
 }
