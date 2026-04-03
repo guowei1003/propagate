@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - propagate-postgres:/var/lib/postgresql/data
+      - ${PROPAGATE_DATA_ROOT:-/data/propagate}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d propagate"]
       interval: 5s
@@ -38,7 +38,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data
+      - ${PROPAGATE_DATA_ROOT:-/data/propagate}/app-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/healthz || exit 1"]
@@ -66,6 +66,3 @@ services:
         condition: service_healthy
     ports:
       - "8080:80"
-
-volumes:
-  propagate-postgres:
