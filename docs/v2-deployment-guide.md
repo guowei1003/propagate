@@ -221,6 +221,13 @@ ${PROPAGATE_DATA_ROOT:-/data/propagate}/app-data/bundles/<RUN_ID>.tar.gz
 | `install_frontend.sh` | **本地前端**：在 `frontend/` 下 `npm install`（可用 `NPM_REGISTRY` 指定 registry）。 |
 | `build_frontend.sh` | **本地前端**：必要时先安装依赖，再 `npm run build`，产出 `frontend/dist`。 |
 
+### 9.1.1 默认国内源与镜像优化
+
+- `Dockerfile.api` 默认将 Debian `apt` 源切到阿里云镜像，并使用阿里云 PyPI 镜像安装 Python 依赖。
+- `Dockerfile.frontend` 与本地前端脚本默认使用 `https://registry.npmmirror.com`。
+- V2 Compose 中的 `api` / `migrate` 容器只安装 Docker CLI，不安装完整 Docker Engine；运行时通过宿主机挂载的 `/var/run/docker.sock` 与宿主机 Docker 通信。
+- 如需覆盖默认值，可在 `${PROPAGATE_DATA_ROOT}/config/.env` 中设置 `APT_MIRROR`、`PIP_INDEX_URL`、`NPM_REGISTRY`。
+
 ### 9.2 推荐执行顺序（按场景）
 
 **场景 A：首次部署（Docker Compose，单机）**

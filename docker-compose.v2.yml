@@ -19,6 +19,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+      args:
+        APT_MIRROR: ${APT_MIRROR:-mirrors.aliyun.com}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/propagate
       LLM_PROVIDER_TYPE: ${LLM_PROVIDER_TYPE:-demo}
@@ -50,6 +53,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+      args:
+        APT_MIRROR: ${APT_MIRROR:-mirrors.aliyun.com}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/propagate
     depends_on:
@@ -61,6 +67,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     depends_on:
       api:
         condition: service_healthy

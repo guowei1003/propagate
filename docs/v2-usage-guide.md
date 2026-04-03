@@ -196,7 +196,7 @@ data/bundles/<RUN_ID>.tar.gz
 如果运行迁移时报 `No module named 'psycopg'`，先执行：
 
 ```bash
-.venv/bin/pip install --index-url https://pypi.org/simple 'psycopg[binary]'
+.venv/bin/pip install --index-url https://mirrors.aliyun.com/pypi/simple/ 'psycopg[binary]'
 ```
 
 ### 6.2 npm registry 不可达
@@ -204,7 +204,7 @@ data/bundles/<RUN_ID>.tar.gz
 如果当前环境被自定义 registry 卡住，可显式覆盖：
 
 ```bash
-NPM_REGISTRY='https://registry.npmjs.org/' ./scripts/v2/install_frontend.sh
+NPM_REGISTRY='https://registry.npmmirror.com' ./scripts/v2/install_frontend.sh
 ```
 
 ### 6.3 Docker 不可用
