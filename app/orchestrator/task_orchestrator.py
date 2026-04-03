@@ -109,7 +109,21 @@ class TaskOrchestrator:
             current_phase=TASK_PHASE_REQUIREMENT_ANALYZING,
         )
         answers = self.clarifications.get_merged_answers(task_id)
-        analysis = requirement_analyzer_agent.run(task["prompt"], answers, env_profile)
+        try:
+            analysis = requirement_analyzer_agent.run(task["prompt"], answers, env_profile)
+        except Exception as exc:
+            self.tasks.update_task(
+                task_id,
+                status=TASK_STATUS_WAITING_USER_INPUT,
+                current_phase=TASK_STATUS_WAITING_USER_INPUT,
+            )
+            event_service.publish(
+                task_id,
+                "requirement.analysis.failed",
+                f"Requirement analysis failed: {exc}",
+                level="error",
+            )
+            return
         self.requirements.save_requirement(
             task_id,
             {

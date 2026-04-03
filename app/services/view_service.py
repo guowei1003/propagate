@@ -35,6 +35,7 @@ PHASE_LABELS = {
 EVENT_LABELS = {
     "task.created": "任务创建",
     "requirement.analysis.completed": "需求分析完成",
+    "requirement.analysis.failed": "需求分析失败",
     "requirement.clarification.requested": "发起需求澄清",
     "requirement.clarification.answered": "提交澄清回答",
     "task.decomposed": "任务拆解完成",
