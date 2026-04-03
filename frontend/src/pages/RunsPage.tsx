@@ -3,6 +3,12 @@ import { useEffect, useState } from "react";
 import { getJson, postJson } from "../lib/api";
 import { subscribeRunEvents } from "../lib/events";
 
+type RunEvent = {
+  id: string;
+  event_type: string;
+  message: string;
+};
+
 type TaskDetails = {
   id: string;
   title: string;
@@ -10,7 +16,7 @@ type TaskDetails = {
   env_profile?: { name: string; provider_type: string; default_model: string } | null;
   dependencies?: Array<{ from_sub_task_id: string; to_sub_task_id: string }>;
   subtasks?: Array<{ id: string; name: string; status: string; output_summary?: { selected_model?: string } }>;
-  events?: Array<{ id: string; event_type: string; message: string }>;
+  events?: RunEvent[];
 };
 
 export function RunsPage() {
@@ -31,7 +37,7 @@ export function RunsPage() {
       setItems((current) =>
         current.map((item) => {
           if (item.run?.id !== activeRunId) return item;
-          return { ...item, events: [...(item.events || []), payload as TaskDetails["events"][number]] };
+          return { ...item, events: [...(item.events || []), payload as RunEvent] };
         })
       );
     });
