@@ -110,6 +110,17 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
       setItems(profileItems);
       onStatsChange({ profileCount: profileItems.length });
     } catch (error) {
+      if (error instanceof ApiError && error.code === "ENV_PROFILE_NOT_CONFIGURED") {
+        setItems([]);
+        onStatsChange({ profileCount: 0 });
+        pushToast({
+          tone: "info",
+          title: "未配置环境",
+          message: "当前还没有环境配置，请先新增一个运行环境。",
+          dedupeKey: "env-profiles-not-configured"
+        });
+        return;
+      }
       notifyRequestError(error, "加载环境配置失败", {
         dedupeKey: "env-profiles-refresh",
         action: {

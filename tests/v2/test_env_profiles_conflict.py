@@ -3,13 +3,17 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from app.v2.core.errors import ConflictError
+from app.v2.core.errors import ConflictError, NotFoundError
 from app.v2.modules.env_profiles.repository import EnvProfileRepository
 from app.v2.modules.env_profiles.schemas import EnvProfileCreatePayload, EnvProfileUpdatePayload
 
 
 class _FakeUniqueViolation(Exception):
     sqlstate = "23505"
+
+
+class _FakeUndefinedTable(Exception):
+    sqlstate = "42P01"
 
 
 class EnvProfilesConflictTestCase(unittest.TestCase):
@@ -71,6 +75,15 @@ class EnvProfilesConflictTestCase(unittest.TestCase):
         self.assertEqual(str(context.exception), "环境配置名称已存在，请更换后重试。")
         self.assertEqual(context.exception.code, "ENV_PROFILE_NAME_CONFLICT")
         self.assertEqual(context.exception.status_code, 409)
+
+    @patch("app.v2.modules.env_profiles.repository.fetch_all", side_effect=_FakeUndefinedTable("missing relation"))
+    def test_list_profiles_maps_missing_storage_to_not_configured(self, _: object) -> None:
+        with self.assertRaises(NotFoundError) as context:
+            self.repository.list_profiles()
+
+        self.assertEqual(str(context.exception), "未检测到可用环境配置，请先新增环境配置。")
+        self.assertEqual(context.exception.code, "ENV_PROFILE_NOT_CONFIGURED")
+        self.assertEqual(context.exception.status_code, 404)
 
 
 if __name__ == "__main__":

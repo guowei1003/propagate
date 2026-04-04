@@ -24,9 +24,30 @@ def _is_unique_violation(exc: Exception) -> bool:
     return "duplicate key value violates unique constraint" in lowered
 
 
+def _is_missing_relation_or_column(exc: Exception) -> bool:
+    sqlstate = getattr(exc, "sqlstate", None) or getattr(exc, "pgcode", None)
+    if sqlstate in {"42P01", "42703"}:
+        return True
+    class_name = exc.__class__.__name__.lower()
+    if "undefinedtable" in class_name or "undefinedcolumn" in class_name:
+        return True
+    lowered = str(exc).lower()
+    return "does not exist" in lowered and (
+        "env_profiles" in lowered or "provider_type" in lowered or "api_base_url" in lowered
+    )
+
+
 class EnvProfileRepository:
     def list_profiles(self) -> list[dict[str, Any]]:
-        return fetch_all("SELECT * FROM env_profiles ORDER BY created_at ASC")
+        try:
+            return fetch_all("SELECT * FROM env_profiles ORDER BY created_at ASC")
+        except Exception as exc:
+            if _is_missing_relation_or_column(exc):
+                raise NotFoundError(
+                    "未检测到可用环境配置，请先新增环境配置。",
+                    code="ENV_PROFILE_NOT_CONFIGURED",
+                ) from exc
+            raise
 
     def get_profile(self, profile_id: str) -> dict[str, Any]:
         row = fetch_one("SELECT * FROM env_profiles WHERE id = %s", (profile_id,))
