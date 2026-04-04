@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from uuid import uuid4
 
 from app.v2.core.models import (
     BundleManifest,
@@ -15,7 +16,7 @@ from app.v2.modules.capabilities.state_machine import (
     apply_approval_decision,
 )
 from app.v2.modules.env_profiles.model_routing import resolve_model_for_stage
-from app.v2.modules.env_profiles.service import mask_api_key
+from app.v2.modules.env_profiles.service import EnvProfileService, mask_api_key
 from app.v2.modules.runtime.risk_scoring import score_capability_risk
 
 
@@ -102,6 +103,31 @@ class EnvProfileServiceTestCase(unittest.TestCase):
     def test_masks_api_key(self) -> None:
         self.assertEqual(mask_api_key("abcd12345678"), "abcd...5678")
         self.assertEqual(mask_api_key("short"), "*****")
+
+    def test_serialize_casts_uuid_id_to_string(self) -> None:
+        service = EnvProfileService()
+        profile_id = uuid4()
+        result = service._serialize(
+            {
+                "id": profile_id,
+                "name": "测试环境",
+                "provider_type": "openai_compatible",
+                "api_base_url": "https://example.com/v1",
+                "api_key": "secret",
+                "default_model": "demo-heuristic",
+                "review_model": "",
+                "test_model": "",
+                "capability_generation_model": "",
+                "report_model": "",
+                "temperature": 0.2,
+                "default_timeout_sec": 300,
+                "max_retries": 2,
+                "max_concurrency": 2,
+                "enable_docker_sandbox": True,
+                "enable_auto_sub_agents": True,
+            }
+        )
+        self.assertEqual(result.id, str(profile_id))
 
 
 class CapabilityRiskScoringTestCase(unittest.TestCase):

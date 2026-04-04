@@ -53,7 +53,7 @@ class EnvProfileService:
 
     def _serialize(self, row: dict) -> EnvProfileResponse:
         return EnvProfileResponse(
-            id=row["id"],
+            id=str(row["id"]),
             name=row["name"],
             provider_type=row["provider_type"],
             api_base_url=row.get("api_base_url") or "",
