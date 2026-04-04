@@ -832,21 +832,22 @@
 
 .toast-item--info {
   border-color: rgba(37, 99, 235, 0.24);
+  background: var(--bg-panel);
 }
 
 .toast-item--success {
   border-color: rgba(15, 159, 110, 0.24);
-  background: var(--accent-success-soft);
+  background: var(--bg-panel);
 }
 
 .toast-item--warning {
   border-color: rgba(196, 131, 29, 0.24);
-  background: var(--accent-warning-soft);
+  background: var(--bg-panel);
 }
 
 .toast-item--error {
   border-color: rgba(203, 58, 49, 0.24);
-  background: var(--accent-danger-soft);
+  background: var(--bg-panel);
 }
 
 .toast-item__body {
