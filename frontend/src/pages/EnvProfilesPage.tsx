@@ -65,6 +65,14 @@ function formatCheckedAt(): string {
   return new Date().toLocaleString("zh-CN", { hour12: false });
 }
 
+function normalizeValidationMessage(message: string): string {
+  const trimmed = message.trim();
+  if (/\b404\b/.test(trimmed)) {
+    return "校验失败：接口地址返回 404，请检查 API Base URL 和模型配置。";
+  }
+  return trimmed || "校验失败：请检查环境配置后重试。";
+}
+
 export function EnvProfilesPage({ meta, onStatsChange }: Props) {
   const [items, setItems] = useState<EnvProfile[]>([]);
   const [form, setForm] = useState(initialForm);
@@ -173,20 +181,22 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
     const profile = items.find((item) => item.id === id);
     const profileName = profile?.name || "目标环境";
     try {
-      const result = await postJson<{ message: string }>(`/v2/env-profiles/${id}/validate`, {});
+      const result = await postJson<{ ok: boolean; message: string }>(`/v2/env-profiles/${id}/validate`, {});
+      const isOk = Boolean(result.ok);
+      const summary = isOk ? result.message : normalizeValidationMessage(result.message);
       setValidationById((current) => ({
         ...current,
         [id]: {
-          status: "success",
-          summary: result.message,
+          status: isOk ? "success" : "error",
+          summary,
           checkedAt: formatCheckedAt()
         }
       }));
       pushToast({
-        tone: "success",
-        title: "校验完成",
-        message: `${profileName}: ${result.message}`,
-        dedupeKey: `env-profile-validate-success-${id}`
+        tone: isOk ? "success" : "warning",
+        title: isOk ? "校验完成" : "校验失败",
+        message: `${profileName}: ${summary}`,
+        dedupeKey: `env-profile-validate-${isOk ? "success" : "error"}-${id}`
       });
     } catch (error) {
       const summary = getErrorMessage(error);
