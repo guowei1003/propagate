@@ -1,23 +1,41 @@
 export class ApiError extends Error {
   status: number;
+  code?: string;
+  type?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, options?: { code?: string; type?: string }) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = options?.code;
+    this.type = options?.type;
   }
 }
+
+type ApiErrorBody = {
+  detail?: string;
+  message?: string;
+  type?: string;
+  code?: string;
+  status?: number;
+};
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   if (!response.ok) {
     let message = `请求失败（${response.status}）`;
+    let code: string | undefined;
+    let type: string | undefined;
+    let status = response.status;
 
     try {
       const contentType = response.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
-        const data = (await response.json()) as { detail?: string; message?: string };
-        message = data.detail || data.message || message;
+        const data = (await response.json()) as ApiErrorBody;
+        message = data.message || data.detail || message;
+        code = data.code;
+        type = data.type;
+        status = typeof data.status === "number" ? data.status : status;
       } else {
         const text = (await response.text()).trim();
         if (text) {
@@ -28,7 +46,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
       // Ignore parse errors and keep the fallback message.
     }
 
-    throw new ApiError(response.status, message);
+    throw new ApiError(status, message, { code, type });
   }
 
   return response.json() as Promise<T>;

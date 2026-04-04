@@ -1,0 +1,125 @@
+<div class="section">
+  <div class="label">Propagate V2 / 研究看板</div>
+  <h2>当前前端的真实问题，不在“功能缺失”，而在“表达失真”</h2>
+  <p class="subtitle">线上入口已经能连到任务、运行、能力、环境和产物接口，但页面没有把 AI 编排系统的状态感、门禁感和交付感表达出来。</p>
+</div>
+
+<div class="split section">
+  <div class="mockup">
+    <div class="mockup-header">现在线上首屏的结构感受</div>
+    <div class="mockup-body">
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:16px;min-height:420px;">
+        <div style="border:1px solid #d9dfeb;border-radius:18px;padding:16px;background:#0b1427;color:#e9f1ff;">
+          <div style="font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#73d7ff;">Propagate V2</div>
+          <div style="font-size:28px;font-weight:800;margin-top:10px;line-height:1.1;">AI Execution Console</div>
+          <div style="margin-top:16px;display:grid;gap:10px;">
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.08);">任务工作台</div>
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">运行监控</div>
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">能力中心</div>
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">环境配置</div>
+            <div style="padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">产物中心</div>
+          </div>
+        </div>
+        <div style="display:grid;gap:14px;">
+          <div style="border:1px solid #d9dfeb;border-radius:20px;padding:18px;background:#ffffff;">
+            <div style="font-size:20px;font-weight:700;">创建任务</div>
+            <div style="margin-top:14px;display:grid;gap:10px;">
+              <div class="mock-input">环境配置</div>
+              <div style="border:1px solid #d9dfeb;border-radius:14px;padding:14px;min-height:120px;color:#7b8798;">需求描述</div>
+              <div class="mock-input">Review 模型覆盖</div>
+              <div class="mock-input">Test 模型覆盖</div>
+            </div>
+          </div>
+          <div style="border:1px solid #d9dfeb;border-radius:20px;padding:18px;background:#ffffff;">
+            <div style="font-size:20px;font-weight:700;">最近任务</div>
+            <div style="margin-top:14px;display:grid;gap:10px;">
+              <div style="border:1px solid #d9dfeb;border-radius:16px;padding:14px;">任务标题 / 状态 / 阶段 / 配置 / 两个按钮</div>
+              <div style="border:1px solid #d9dfeb;border-radius:16px;padding:14px;">任务标题 / 状态 / 阶段 / 配置 / 两个按钮</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">从代码和接口里确认到的诊断</div>
+    <div class="mockup-body">
+      <div class="pros-cons">
+        <div class="cons">
+          <h4>现状问题</h4>
+          <ul>
+            <li>导航、表单、卡片全部同权重，首屏没有主次。</li>
+            <li>空数据时几乎只剩壳子，第一印象单薄。</li>
+            <li>运行监控和详情页大量直接输出 JSON，缺少专业译码层。</li>
+            <li>状态没有形成稳定色彩和组件语义，执行门禁看不出来。</li>
+            <li>页面更像临时后台，而不是 AI 指挥台。</li>
+          </ul>
+        </div>
+        <div class="pros">
+          <h4>可保留基础</h4>
+          <ul>
+            <li>路由壳层已经够简单，适合彻底重组信息架构。</li>
+            <li>任务、运行、能力、环境、产物五块业务边界清晰。</li>
+            <li>后端已经返回状态、事件、依赖、产物等核心数据。</li>
+            <li>旧模板里已有状态标签、进度条、事件流等成熟表达经验。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">已确认的产品本质</div>
+  <h3>Propagate V2 不是“展示型仪表盘”，而是“AI 执行编排指挥台”</h3>
+  <div class="cards">
+    <div class="card">
+      <div class="card-body">
+        <h3>主线 1：任务编排</h3>
+        <p>创建任务、补充澄清、跟踪执行阶段和子任务依赖。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h3>主线 2：能力审批</h3>
+        <p>审批 agent / skill 候选能力，决定 run 是否能继续推进。</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h3>主线 3：交付审计</h3>
+        <p>查看事件、产物、bundle 和最终报告，完成复盘与交付。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">真实状态流</div>
+  <div class="mockup">
+    <div class="mockup-header">界面必须把这些状态翻译成人能快速扫描的信息</div>
+    <div class="mockup-body">
+      <div style="display:grid;gap:14px;">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+          <span style="padding:10px 14px;border-radius:999px;background:#fff4dc;border:1px solid #f0d48b;">WAITING_USER_INPUT</span>
+          <span style="color:#7b8798;">→</span>
+          <span style="padding:10px 14px;border-radius:999px;background:#eef4ff;border:1px solid #b7caf7;">WAITING_APPROVAL</span>
+          <span style="color:#7b8798;">→</span>
+          <span style="padding:10px 14px;border-radius:999px;background:#e7fbf5;border:1px solid #98dfc0;">RUNNING / SUBTASK_RUNNING</span>
+          <span style="color:#7b8798;">→</span>
+          <span style="padding:10px 14px;border-radius:999px;background:#eef8ef;border:1px solid #b6ddb9;">COMPLETED / PARTIAL_SUCCESS</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+          <span style="padding:10px 14px;border-radius:999px;background:#fff0f0;border:1px solid #efb2b2;">NEEDS_HUMAN_REVIEW</span>
+          <span style="padding:10px 14px;border-radius:999px;background:#f5f2ff;border:1px solid #cdc0ff;">BLOCKED_BY_DEPENDENCY</span>
+          <span style="padding:10px 14px;border-radius:999px;background:#f6f8fb;border:1px solid #d7dfeb;">PENDING / READY</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="subtitle">这张研究看板只用来确认我们对现状的理解是否一致。后续如果你认可，我会继续在浏览器里展示“更产品化 AI 指挥台”的信息层次草图。</p>
+</div>

@@ -5,8 +5,9 @@ import { PageHeader } from "../components/PageHeader";
 import { ProfileCatalog } from "../components/profiles/ProfileCatalog";
 import { ProfileFormPanel } from "../components/profiles/ProfileFormPanel";
 import { StatusBadge } from "../components/StatusBadge";
-import { getErrorMessage, getJson, postJson, putJson } from "../lib/api";
+import { ApiError, getErrorMessage, getJson, postJson, putJson } from "../lib/api";
 import { buildProfileMetrics } from "../lib/presenters";
+import { type ToastAction, useToast } from "../lib/toast";
 
 type EnvProfile = {
   id: string;
@@ -25,6 +26,12 @@ type EnvProfile = {
   enable_docker_sandbox: boolean;
   enable_auto_sub_agents: boolean;
   api_key_masked: string;
+};
+
+type ProfileValidationSnapshot = {
+  status: "success" | "error";
+  summary: string;
+  checkedAt: string;
 };
 
 const initialForm = {
@@ -54,26 +61,64 @@ type Props = {
   onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
 };
 
+function formatCheckedAt(): string {
+  return new Date().toLocaleString("zh-CN", { hour12: false });
+}
+
 export function EnvProfilesPage({ meta, onStatsChange }: Props) {
   const [items, setItems] = useState<EnvProfile[]>([]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState("");
-  const [validationMessageById, setValidationMessageById] = useState<Record<string, string>>({});
+  const [validationById, setValidationById] = useState<Record<string, ProfileValidationSnapshot>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingValidationId, setPendingValidationId] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const { pushToast } = useToast();
+
+  function notifyRequestError(
+    error: unknown,
+    title: string,
+    options?: {
+      dedupeKey?: string;
+      action?: ToastAction;
+    }
+  ) {
+    if (error instanceof ApiError && error.status === 409 && error.code === "ENV_PROFILE_NAME_CONFLICT") {
+      pushToast({
+        tone: "warning",
+        title: "名称冲突",
+        message: "环境配置名称已存在，请更换名称后重试。",
+        dedupeKey: "env-profile-name-conflict"
+      });
+      return;
+    }
+
+    pushToast({
+      tone: "error",
+      title,
+      message: getErrorMessage(error),
+      dedupeKey: options?.dedupeKey,
+      action: options?.action
+    });
+  }
 
   async function refresh() {
     setIsRefreshing(true);
-    setErrorMessage("");
 
     try {
       const profileItems = await getJson<EnvProfile[]>("/v2/env-profiles");
       setItems(profileItems);
       onStatsChange({ profileCount: profileItems.length });
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      notifyRequestError(error, "加载环境配置失败", {
+        dedupeKey: "env-profiles-refresh",
+        action: {
+          label: "重试",
+          onClick: () => {
+            void refresh();
+          }
+        }
+      });
     } finally {
       setIsRefreshing(false);
     }
@@ -86,19 +131,27 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
   async function handleSubmit(event?: FormEvent) {
     event?.preventDefault();
     setIsSubmitting(true);
-    setErrorMessage("");
+    const isEditing = Boolean(editingId);
 
     try {
-      if (editingId) {
+      if (isEditing) {
         await putJson(`/v2/env-profiles/${editingId}`, form);
       } else {
         await postJson("/v2/env-profiles", form);
       }
       setForm(initialForm);
       setEditingId("");
+      pushToast({
+        tone: "success",
+        title: isEditing ? "更新成功" : "创建成功",
+        message: isEditing ? "环境配置已更新。" : "环境配置已创建。",
+        dedupeKey: isEditing ? "env-profile-update-success" : "env-profile-create-success"
+      });
       await refresh();
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      notifyRequestError(error, isEditing ? "更新环境配置失败" : "创建环境配置失败", {
+        dedupeKey: isEditing ? "env-profile-update-error" : "env-profile-create-error"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -106,19 +159,43 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
 
   async function handleValidate(id: string) {
     setPendingValidationId(id);
-    setErrorMessage("");
+    const profile = items.find((item) => item.id === id);
+    const profileName = profile?.name || "目标环境";
     try {
       const result = await postJson<{ message: string }>(`/v2/env-profiles/${id}/validate`, {});
-      setValidationMessageById((current) => ({ ...current, [id]: result.message }));
+      setValidationById((current) => ({
+        ...current,
+        [id]: {
+          status: "success",
+          summary: result.message,
+          checkedAt: formatCheckedAt()
+        }
+      }));
+      pushToast({
+        tone: "success",
+        title: "校验完成",
+        message: `${profileName}: ${result.message}`,
+        dedupeKey: `env-profile-validate-success-${id}`
+      });
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      const summary = getErrorMessage(error);
+      setValidationById((current) => ({
+        ...current,
+        [id]: {
+          status: "error",
+          summary,
+          checkedAt: formatCheckedAt()
+        }
+      }));
+      notifyRequestError(error, "环境校验失败", {
+        dedupeKey: `env-profile-validate-error-${id}`
+      });
     } finally {
       setPendingValidationId("");
     }
   }
 
   async function handleEdit(id: string) {
-    setErrorMessage("");
     try {
       const detail = await getJson<EnvProfile>(`/v2/env-profiles/${id}`);
       setEditingId(id);
@@ -140,7 +217,9 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
         enable_auto_sub_agents: detail.enable_auto_sub_agents
       });
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      notifyRequestError(error, "加载环境详情失败", {
+        dedupeKey: `env-profile-detail-${id}`
+      });
     }
   }
 
@@ -156,12 +235,11 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
         description={meta.description}
         actions={
           <StatusBadge
-            label={editingId ? "正在编辑" : "新增环境配置"}
+            label={editingId ? "正在编辑" : isRefreshing ? "同步中" : "新增环境配置"}
             tone={editingId ? "warning" : "info"}
           />
         }
       />
-      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
       <MetricStrip items={buildProfileMetrics(items, editingId)} />
       <div className="profiles-console-grid">
         <div className="profiles-console-grid__form">
@@ -178,7 +256,7 @@ export function EnvProfilesPage({ meta, onStatsChange }: Props) {
         <div className="profiles-console-grid__catalog">
           <ProfileCatalog
             items={items}
-            validationMessageById={validationMessageById}
+            validationById={validationById}
             pendingValidationId={pendingValidationId}
             onEdit={(id) => void handleEdit(id)}
             onValidate={(id) => void handleValidate(id)}

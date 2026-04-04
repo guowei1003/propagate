@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 import { AppSidebar } from "./components/AppSidebar";
 import { ConsoleTopbar } from "./components/ConsoleTopbar";
+import { ToastProvider } from "./components/notifications/ToastProvider";
+import { ToastViewport } from "./components/notifications/ToastViewport";
 import { ArtifactsPage } from "./pages/ArtifactsPage";
 import { CapabilitiesPage } from "./pages/CapabilitiesPage";
 import { EnvProfilesPage } from "./pages/EnvProfilesPage";
@@ -162,40 +164,47 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <AppSidebar
-        currentViewLabel={currentView.label}
-        pendingCapabilitiesLabel={String(stats.pendingCapabilities)}
-        stats={stats}
-        view={view}
-        views={views}
-        onChange={(nextView) => setView(nextView as ViewKey)}
-      />
-      <div className="workspace-shell">
-        <ConsoleTopbar
-          eyebrow={currentView.eyebrow}
-          title={currentView.title}
-          description={currentView.description}
-          themeMode={themeMode}
-          resolvedTheme={resolvedTheme}
-          onThemeModeChange={setThemeMode}
+    <ToastProvider>
+      <div className="app-shell">
+        <AppSidebar
+          currentViewLabel={currentView.label}
+          pendingCapabilitiesLabel={String(stats.pendingCapabilities)}
+          stats={stats}
+          view={view}
+          views={views}
+          onChange={(nextView) => setView(nextView as ViewKey)}
         />
-        <main className="workspace">
-          <div key={view} className="workspace-transition">
-            {view === "tasks" && (
-              <TasksPage meta={currentView} onNavigate={handleTaskNavigate} onStatsChange={handleStatsChange} />
-            )}
-            {view === "runs" && (
-              <RunsPage meta={currentView} onStatsChange={handleStatsChange} taskNavContext={taskNavContext} />
-            )}
-            {view === "capabilities" && <CapabilitiesPage meta={currentView} onStatsChange={handleStatsChange} />}
-            {view === "profiles" && <EnvProfilesPage meta={currentView} onStatsChange={handleStatsChange} />}
-            {view === "artifacts" && (
-              <ArtifactsPage meta={currentView} onStatsChange={handleStatsChange} taskNavContext={taskNavContext} />
-            )}
-          </div>
-        </main>
+        <div className="workspace-shell">
+          <ConsoleTopbar
+            eyebrow={currentView.eyebrow}
+            title={currentView.title}
+            description={currentView.description}
+            themeMode={themeMode}
+            resolvedTheme={resolvedTheme}
+            onThemeModeChange={setThemeMode}
+          />
+          <main className="workspace">
+            <div key={view} className="workspace-transition">
+              {view === "tasks" && (
+                <TasksPage meta={currentView} onNavigate={handleTaskNavigate} onStatsChange={handleStatsChange} />
+              )}
+              {view === "runs" && (
+                <RunsPage meta={currentView} onStatsChange={handleStatsChange} taskNavContext={taskNavContext} />
+              )}
+              {view === "capabilities" && <CapabilitiesPage meta={currentView} onStatsChange={handleStatsChange} />}
+              {view === "profiles" && <EnvProfilesPage meta={currentView} onStatsChange={handleStatsChange} />}
+              {view === "artifacts" && (
+                <ArtifactsPage
+                  meta={currentView}
+                  onStatsChange={handleStatsChange}
+                  taskNavContext={taskNavContext}
+                />
+              )}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+      <ToastViewport />
+    </ToastProvider>
   );
 }

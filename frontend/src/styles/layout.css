@@ -190,6 +190,13 @@
   .page-header {
     flex-direction: column;
   }
+
+  .toast-viewport {
+    top: var(--space-4);
+    right: var(--space-4);
+    left: var(--space-4);
+    width: auto;
+  }
 }
 
 @media (max-width: 639px) {
@@ -210,5 +217,11 @@
   .metric-strip,
   .sidebar-nav {
     grid-template-columns: 1fr;
+  }
+
+  .toast-viewport {
+    top: calc(env(safe-area-inset-top) + var(--space-3));
+    right: var(--space-3);
+    left: var(--space-3);
   }
 }
