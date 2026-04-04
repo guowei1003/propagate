@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { getErrorMessage, postJson } from "../../lib/api";
 import { getPhaseLabel, getSubtaskStatusMeta, getTaskStatusMeta } from "../../lib/presenters";
@@ -19,6 +19,7 @@ type TaskDetail = {
   title: string;
   status: string;
   current_phase: string;
+  run?: { id: string } | null;
   env_profile?: { name: string } | null;
   requirement?: Record<string, unknown> | null;
   clarification_rounds?: ClarificationRound[];
@@ -27,38 +28,48 @@ type TaskDetail = {
 
 type Props = {
   task: TaskDetail | null;
-  onNavigateRuns: () => void;
+  onNavigateRuns: (context: { taskId?: string; runId?: string }) => void;
+  onNavigateArtifacts: (context: { taskId?: string; runId?: string }) => void;
+  onNavigateCapabilities: () => void;
   onRefresh: () => Promise<void>;
 };
 
 function getNextActionText(task: TaskDetail): string {
   if (task.status === "WAITING_USER_INPUT") {
-    return "当前任务正在等待澄清补充，先补齐必要问题再继续执行。";
+    return "当前任务正在等待补充信息，完成补充后会继续推进。";
+  }
+  if (task.status === "WAITING_APPROVAL") {
+    return "当前任务正在等待能力审批，审批通过后会继续执行。";
   }
   if (task.status === "RUNNING") {
-    return "当前任务已经进入执行阶段，建议切换到执行流监控查看推进情况。";
+    return "当前任务正在执行，可进入执行页面查看实时推进。";
   }
   if (task.status === "FAILED") {
-    return "本次任务已失败，建议检查需求、环境和运行阶段信息后重新发起。";
+    return "当前任务执行失败，建议先查看执行记录定位原因。";
   }
   if (task.status === "COMPLETED" || task.status === "PARTIAL_SUCCESS") {
-    return "任务已结束，可以继续检查产物与报告是否满足预期。";
+    return "当前任务已结束，可进入交付页查看产物与报告。";
   }
-  return "系统会继续按照当前阶段推进，必要时会在这里提示下一步动作。";
+  return "系统会继续按当前阶段推进，必要时请补充信息或查看执行。";
 }
 
-export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
+export function TaskInspector({ task, onNavigateRuns, onNavigateArtifacts, onNavigateCapabilities, onRefresh }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmittingAnswers, setIsSubmittingAnswers] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  useEffect(() => {
+    setAnswers({});
+    setErrorMessage("");
+  }, [task?.id]);
+
   if (!task) {
     return (
-      <PanelFrame title="任务检视区" description="这里会显示当前选中任务的摘要、建议动作和原始需求。">
+      <PanelFrame title="任务详情" description="这里会显示当前选中任务的摘要、建议动作和原始需求。">
         <EmptyState
           title="先从队列中选择一个任务"
-          description="选中任务后，这里会提供状态摘要、澄清问答和子任务清单。"
-          aside="检视区保持聚焦"
+          description="选中任务后，这里会提供状态摘要、补充信息和子任务清单。"
+          aside="任务详情保持聚焦"
         />
       </PanelFrame>
     );
@@ -67,6 +78,8 @@ export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
   const currentTask = task;
   const pendingRound = (task.clarification_rounds || []).find((item) => item.status === "pending");
   const statusMeta = getTaskStatusMeta(task.status);
+  const hasRun = Boolean(task.run?.id);
+  const runContext = { taskId: task.id, runId: task.run?.id || "" };
 
   async function handleSubmitAnswers() {
     if (!pendingRound) {
@@ -89,8 +102,8 @@ export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
 
   return (
     <PanelFrame
-      title="任务检视区"
-      description="在这里判断当前任务是否需要补充信息、切换监控或继续等待系统推进。"
+      title="任务详情"
+      description="在这里判断当前任务是否需要补充信息、进入审批、查看执行或检查交付。"
     >
       <div className="stack">
         {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
@@ -116,20 +129,52 @@ export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
         <section className="inspector-section">
           <strong>下一步动作</strong>
           <div className="inspector-note">{getNextActionText(task)}</div>
-          {task.status === "RUNNING" ? (
-            <div className="inline-actions">
-              <button className="btn btn--primary" type="button" onClick={onNavigateRuns}>
-                进入执行流监控
+          <div className="inline-actions">
+            {task.status === "WAITING_USER_INPUT" ? (
+              <button
+                className="btn btn--primary"
+                disabled={!pendingRound || isSubmittingAnswers}
+                type="button"
+                onClick={() => void handleSubmitAnswers()}
+              >
+                {isSubmittingAnswers ? "提交中..." : "提交补充信息"}
               </button>
-            </div>
-          ) : null}
+            ) : null}
+            {task.status === "WAITING_APPROVAL" ? (
+              <button className="btn btn--primary" type="button" onClick={onNavigateCapabilities}>
+                前往能力审批
+              </button>
+            ) : null}
+            {task.status === "RUNNING" || task.status === "FAILED" ? (
+              <button
+                className="btn btn--primary"
+                disabled={!hasRun}
+                title={hasRun ? "" : "当前任务尚未生成可查看的执行记录"}
+                type="button"
+                onClick={() => onNavigateRuns(runContext)}
+              >
+                查看执行
+              </button>
+            ) : null}
+            {task.status === "COMPLETED" || task.status === "PARTIAL_SUCCESS" ? (
+              <button
+                className="btn btn--primary"
+                disabled={!hasRun}
+                title={hasRun ? "" : "当前任务尚未生成可查看的交付记录"}
+                type="button"
+                onClick={() => onNavigateArtifacts(runContext)}
+              >
+                查看交付产物
+              </button>
+            ) : null}
+          </div>
         </section>
 
         {pendingRound ? (
           <section className="form-group inspector-section">
             <div className="form-group__header">
-              <strong>澄清问答</strong>
-              <p>系统已经停在待补充阶段，请先回答当前问题，任务才会继续推进。</p>
+              <strong>补充信息</strong>
+              <p>系统当前停在待补充阶段，请先回答问题，任务才会继续推进。</p>
             </div>
             <div className="field-list">
               {(pendingRound.questions || []).map((question) => (
@@ -150,7 +195,7 @@ export function TaskInspector({ task, onNavigateRuns, onRefresh }: Props) {
                 type="button"
                 onClick={() => void handleSubmitAnswers()}
               >
-                {isSubmittingAnswers ? "提交中..." : "提交澄清"}
+                {isSubmittingAnswers ? "提交中..." : "提交补充信息"}
               </button>
             </div>
           </section>

@@ -105,6 +105,10 @@
   gap: var(--space-6);
 }
 
+.tasks-layout {
+  gap: var(--space-5);
+}
+
 .page-header {
   display: flex;
   align-items: flex-start;

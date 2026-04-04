@@ -16,26 +16,58 @@ type Props = {
     description: string;
   };
   onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
+  taskNavContext?: {
+    taskId?: string;
+    runId?: string;
+    navigationVersion: number;
+  };
 };
 
-export function ArtifactsPage({ meta, onStatsChange }: Props) {
+function pickTaskForArtifacts(
+  items: TaskSummary[],
+  context?: {
+    taskId?: string;
+    runId?: string;
+  }
+): TaskSummary | null {
+  if (context?.runId) {
+    const matchedByRun = items.find((item) => item.run?.id === context.runId);
+    if (matchedByRun) {
+      return matchedByRun;
+    }
+  }
+  if (context?.taskId) {
+    const matchedByTask = items.find((item) => item.id === context.taskId && item.run?.id);
+    if (matchedByTask) {
+      return matchedByTask;
+    }
+  }
+  return items.find((item) => item.run?.id) || null;
+}
+
+export function ArtifactsPage({ meta, onStatsChange, taskNavContext }: Props) {
   const [artifacts, setArtifacts] = useState<Record<string, unknown> | null>(null);
   const [runId, setRunId] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
   const [isBuilding, setIsBuilding] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [contextNotice, setContextNotice] = useState("");
 
-  async function refresh() {
+  async function refresh(context?: { taskId?: string; runId?: string }) {
     setIsRefreshing(true);
     setErrorMessage("");
+    setContextNotice("");
 
     try {
       const items = await getJson<TaskSummary[]>("/v2/tasks");
       onStatsChange({ taskCount: items.length });
-      const latestTask = items.find((item) => item.run?.id);
-      const latestRunId = latestTask?.run?.id;
+      const targetTask = pickTaskForArtifacts(items, context);
+      const latestRunId = targetTask?.run?.id;
       if (!latestRunId) {
+        if (context?.runId || context?.taskId) {
+          setContextNotice("未找到该任务的可用交付产物，已清空当前展示。");
+        }
         setRunId("");
         setTaskTitle("");
         setArtifacts(null);
@@ -43,7 +75,7 @@ export function ArtifactsPage({ meta, onStatsChange }: Props) {
       }
 
       setRunId(latestRunId);
-      setTaskTitle(latestTask?.title || "");
+      setTaskTitle(targetTask?.title || "");
       setArtifacts(await getJson<Record<string, unknown>>(`/v2/runs/${latestRunId}/artifacts`));
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -55,6 +87,16 @@ export function ArtifactsPage({ meta, onStatsChange }: Props) {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!taskNavContext?.navigationVersion) {
+      return;
+    }
+    void refresh({
+      taskId: taskNavContext.taskId,
+      runId: taskNavContext.runId
+    });
+  }, [taskNavContext?.navigationVersion]);
 
   async function handleBuildBundle() {
     if (!runId) return;
@@ -84,6 +126,7 @@ export function ArtifactsPage({ meta, onStatsChange }: Props) {
         }
       />
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+      {contextNotice ? <div className="task-context-notice">{contextNotice}</div> : null}
       <MetricStrip items={buildArtifactMetrics({ runId, artifacts, isBuilding })} />
       <ArtifactBundlePanel
         runId={runId}

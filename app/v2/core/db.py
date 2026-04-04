@@ -46,23 +46,34 @@ def get_connection() -> Iterator[Any]:
         conn.close()
 
 
-def fetch_one(query: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
+@contextmanager
+def transaction(connection: Any | None = None) -> Iterator[Any]:
+    if connection is not None:
+        yield connection
+        return
     with get_connection() as conn:
+        yield conn
+
+
+def fetch_one(query: str, params: tuple[Any, ...] = (), *, connection: Any | None = None) -> dict[str, Any] | None:
+    with transaction(connection) as conn:
         with conn.cursor() as cur:
             cur.execute(query, params)
             row = cur.fetchone()
     return dict(row) if row else None
 
 
-def fetch_all(query: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
-    with get_connection() as conn:
+
+def fetch_all(query: str, params: tuple[Any, ...] = (), *, connection: Any | None = None) -> list[dict[str, Any]]:
+    with transaction(connection) as conn:
         with conn.cursor() as cur:
             cur.execute(query, params)
             rows = cur.fetchall()
     return [dict(row) for row in rows]
 
 
-def execute(query: str, params: tuple[Any, ...] = ()) -> None:
-    with get_connection() as conn:
+
+def execute(query: str, params: tuple[Any, ...] = (), *, connection: Any | None = None) -> None:
+    with transaction(connection) as conn:
         with conn.cursor() as cur:
             cur.execute(query, params)

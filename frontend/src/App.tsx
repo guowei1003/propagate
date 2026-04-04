@@ -33,13 +33,19 @@ type AppStats = {
   pendingCapabilities: number;
 };
 
+type TaskNavigationContext = {
+  taskId?: string;
+  runId?: string;
+  navigationVersion: number;
+};
+
 const views: ViewMeta[] = [
   {
     key: "tasks",
-    label: "任务编排",
-    eyebrow: "Task Orchestration",
-    title: "任务编排",
-    description: "从需求输入、环境选择到澄清补充，所有新任务在这里进入执行链路。"
+    label: "任务中心",
+    eyebrow: "任务中心",
+    title: "任务中心",
+    description: "快速新建任务、补充信息、查看执行流程并落地交付结果。"
   },
   {
     key: "runs",
@@ -73,6 +79,11 @@ const views: ViewMeta[] = [
 
 export default function App() {
   const [view, setView] = useState<ViewKey>("tasks");
+  const [taskNavContext, setTaskNavContext] = useState<TaskNavigationContext>({
+    taskId: "",
+    runId: "",
+    navigationVersion: 0
+  });
   const [stats, setStats] = useState<AppStats>({
     taskCount: 0,
     profileCount: 0,
@@ -133,6 +144,23 @@ export default function App() {
     setStats((current) => ({ ...current, ...update }));
   }
 
+  function handleTaskNavigate(
+    nextView: ViewKey,
+    context?: {
+      taskId?: string;
+      runId?: string;
+    }
+  ) {
+    if (nextView === "runs" || nextView === "artifacts") {
+      setTaskNavContext((current) => ({
+        taskId: context?.taskId || "",
+        runId: context?.runId || "",
+        navigationVersion: current.navigationVersion + 1
+      }));
+    }
+    setView(nextView);
+  }
+
   return (
     <div className="app-shell">
       <AppSidebar
@@ -154,11 +182,17 @@ export default function App() {
         />
         <main className="workspace">
           <div key={view} className="workspace-transition">
-            {view === "tasks" && <TasksPage meta={currentView} onNavigate={setView} onStatsChange={handleStatsChange} />}
-            {view === "runs" && <RunsPage meta={currentView} onStatsChange={handleStatsChange} />}
+            {view === "tasks" && (
+              <TasksPage meta={currentView} onNavigate={handleTaskNavigate} onStatsChange={handleStatsChange} />
+            )}
+            {view === "runs" && (
+              <RunsPage meta={currentView} onStatsChange={handleStatsChange} taskNavContext={taskNavContext} />
+            )}
             {view === "capabilities" && <CapabilitiesPage meta={currentView} onStatsChange={handleStatsChange} />}
             {view === "profiles" && <EnvProfilesPage meta={currentView} onStatsChange={handleStatsChange} />}
-            {view === "artifacts" && <ArtifactsPage meta={currentView} onStatsChange={handleStatsChange} />}
+            {view === "artifacts" && (
+              <ArtifactsPage meta={currentView} onStatsChange={handleStatsChange} taskNavContext={taskNavContext} />
+            )}
           </div>
         </main>
       </div>

@@ -35,9 +35,38 @@ type Props = {
     description: string;
   };
   onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
+  taskNavContext?: {
+    taskId?: string;
+    runId?: string;
+    navigationVersion: number;
+  };
 };
 
-export function RunsPage({ meta, onStatsChange }: Props) {
+function pickRunId(
+  detailed: TaskDetails[],
+  activeRunId: string,
+  context?: {
+    taskId?: string;
+    runId?: string;
+  }
+): string {
+  const availableRunIds = detailed.flatMap((item) => (item.run?.id ? [item.run.id] : []));
+  if (context?.runId && availableRunIds.includes(context.runId)) {
+    return context.runId;
+  }
+  if (context?.taskId) {
+    const matchedTask = detailed.find((item) => item.id === context.taskId && item.run?.id);
+    if (matchedTask?.run?.id) {
+      return matchedTask.run.id;
+    }
+  }
+  if (activeRunId && availableRunIds.includes(activeRunId)) {
+    return activeRunId;
+  }
+  return availableRunIds[0] || "";
+}
+
+export function RunsPage({ meta, onStatsChange, taskNavContext }: Props) {
   const [items, setItems] = useState<TaskDetails[]>([]);
   const [activeRunId, setActiveRunId] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -45,19 +74,14 @@ export function RunsPage({ meta, onStatsChange }: Props) {
   const [errorMessage, setErrorMessage] = useState("");
   const [latestEventId, setLatestEventId] = useState("");
 
-  async function refresh(preferredRunId?: string) {
+  async function refresh(context?: { taskId?: string; runId?: string }) {
     setIsRefreshing(true);
     setErrorMessage("");
 
     try {
       const tasks = await getJson<TaskDetails[]>("/v2/tasks");
       const detailed = await Promise.all(tasks.map((item) => getJson<TaskDetails>(`/v2/tasks/${item.id}`)));
-      const availableRunIds = detailed.flatMap((item) => (item.run?.id ? [item.run.id] : []));
-      const nextRunId =
-        (preferredRunId && availableRunIds.includes(preferredRunId) && preferredRunId) ||
-        (activeRunId && availableRunIds.includes(activeRunId) && activeRunId) ||
-        availableRunIds[0] ||
-        "";
+      const nextRunId = pickRunId(detailed, activeRunId, context);
       setItems(detailed);
       setActiveRunId(nextRunId);
       onStatsChange({ taskCount: detailed.length });
@@ -71,6 +95,16 @@ export function RunsPage({ meta, onStatsChange }: Props) {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    if (!taskNavContext?.navigationVersion) {
+      return;
+    }
+    void refresh({
+      taskId: taskNavContext.taskId,
+      runId: taskNavContext.runId
+    });
+  }, [taskNavContext?.navigationVersion]);
 
   useEffect(() => {
     if (!activeRunId) return;
@@ -90,7 +124,7 @@ export function RunsPage({ meta, onStatsChange }: Props) {
     setErrorMessage("");
     try {
       await postJson(`/v2/runs/${runId}/resume`, {});
-      await refresh(runId);
+      await refresh({ runId });
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {

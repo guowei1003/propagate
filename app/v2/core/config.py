@@ -17,6 +17,8 @@ class V2Settings:
     bundle_root: Path = BASE_DIR / "data" / "bundles"
     runtime_root: Path = BASE_DIR / "data" / "runtime-v2"
     default_system_model: str = os.getenv("LLM_DEFAULT_MODEL", "demo-heuristic")
+    runtime_worker_threads: int = int(os.getenv("V2_RUNTIME_WORKER_THREADS", "4"))
+    event_stream_poll_interval_sec: float = float(os.getenv("V2_EVENT_STREAM_POLL_INTERVAL_SEC", "1.0"))
 
 
 v2_settings = V2Settings()

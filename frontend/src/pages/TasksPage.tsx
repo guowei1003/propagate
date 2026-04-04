@@ -1,17 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { MetricStrip } from "../components/MetricStrip";
-import { PageHeader } from "../components/PageHeader";
-import { TaskComposer } from "../components/tasks/TaskComposer";
+import { TaskActionInbox } from "../components/tasks/TaskActionInbox";
 import { TaskInspector } from "../components/tasks/TaskInspector";
+import { TaskQuickCreateModal } from "../components/tasks/TaskQuickCreateModal";
 import { TaskQueue } from "../components/tasks/TaskQueue";
 import { getErrorMessage, getJson, postJson } from "../lib/api";
-import { buildTaskMetrics } from "../lib/presenters";
+import { buildTaskMetrics, pickPreferredTask } from "../lib/presenters";
 
 type EnvProfile = { id: string; name: string };
 type TaskSummary = {
   id: string;
   title: string;
+  created_at: string;
   status: string;
   current_phase: string;
   env_profile?: { name: string } | null;
@@ -27,11 +28,16 @@ type Props = {
     title: string;
     description: string;
   };
-  onNavigate: (view: "tasks" | "runs" | "capabilities" | "profiles" | "artifacts") => void;
+  onNavigate: (
+    view: "tasks" | "runs" | "capabilities" | "profiles" | "artifacts",
+    context?: { taskId?: string; runId?: string }
+  ) => void;
   onStatsChange: (update: { taskCount?: number; profileCount?: number; pendingCapabilities?: number }) => void;
 };
 
 export function TasksPage({ meta, onNavigate, onStatsChange }: Props) {
+  const successTimeoutRef = useRef<number | null>(null);
+  const queueSectionRef = useRef<HTMLDivElement | null>(null);
   const [prompt, setPrompt] = useState("");
   const [envProfileId, setEnvProfileId] = useState("");
   const [modelOverrides, setModelOverrides] = useState({
@@ -45,11 +51,25 @@ export function TasksPage({ meta, onNavigate, onStatsChange }: Props) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [pageErrorMessage, setPageErrorMessage] = useState("");
+  const [createErrorMessage, setCreateErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  async function refresh(preferredTaskId?: string) {
+  function clearSuccessTimer() {
+    if (successTimeoutRef.current) {
+      window.clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = null;
+    }
+  }
+
+  async function refresh(options?: { preferredTaskId?: string; errorScope?: "page" | "create" }) {
     setIsRefreshing(true);
-    setErrorMessage("");
+    if (options?.errorScope === "create") {
+      setCreateErrorMessage("");
+    } else {
+      setPageErrorMessage("");
+    }
 
     try {
       const [taskItems, profileItems] = await Promise.all([
@@ -67,27 +87,61 @@ export function TasksPage({ meta, onNavigate, onStatsChange }: Props) {
         setEnvProfileId(profileItems[0].id);
       }
 
-      const nextTask =
-        taskItems.find((item) => item.id === preferredTaskId) ||
-        taskItems.find((item) => item.id === selectedTask?.id) ||
-        taskItems[0] ||
-        null;
-
+      const nextTask = pickPreferredTask(taskItems, options?.preferredTaskId, selectedTask?.id);
       setSelectedTask(nextTask);
+      return true;
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      if (options?.errorScope === "create") {
+        setCreateErrorMessage(getErrorMessage(error));
+      } else {
+        setPageErrorMessage(getErrorMessage(error));
+      }
+      return false;
     } finally {
       setIsRefreshing(false);
     }
   }
 
   useEffect(() => {
-    void refresh();
+    void refresh({ errorScope: "page" });
   }, []);
 
-  async function handleSubmit() {
+  useEffect(() => {
+    if (!successMessage) {
+      clearSuccessTimer();
+      return;
+    }
+    clearSuccessTimer();
+    successTimeoutRef.current = window.setTimeout(() => {
+      setSuccessMessage("");
+      successTimeoutRef.current = null;
+    }, 4000);
+    return () => {
+      clearSuccessTimer();
+    };
+  }, [successMessage]);
+
+  useEffect(() => {
+    return () => {
+      clearSuccessTimer();
+    };
+  }, []);
+
+  function handleOpenCreateModal() {
+    clearSuccessTimer();
+    setSuccessMessage("");
+    setCreateErrorMessage("");
+    setIsCreateModalOpen(true);
+  }
+
+  async function handleSubmitCreateTask() {
+    if (!prompt.trim() || !envProfileId) {
+      return;
+    }
     setIsSubmitting(true);
-    setErrorMessage("");
+    clearSuccessTimer();
+    setSuccessMessage("");
+    setCreateErrorMessage("");
 
     try {
       const task = await postJson<TaskSummary>("/v2/tasks", {
@@ -96,60 +150,95 @@ export function TasksPage({ meta, onNavigate, onStatsChange }: Props) {
         title: "",
         model_overrides: Object.fromEntries(Object.entries(modelOverrides).filter(([, value]) => value.trim()))
       });
+      const refreshed = await refresh({ preferredTaskId: task.id, errorScope: "create" });
+      if (!refreshed) {
+        return;
+      }
+      setIsCreateModalOpen(false);
       setPrompt("");
       setModelOverrides({ review: "", test: "", report: "", capability_generation: "" });
-      await refresh(task.id);
-      const detail = await getJson<TaskSummary>(`/v2/tasks/${task.id}`);
-      setSelectedTask(detail);
-      if (detail.status !== "WAITING_USER_INPUT") {
-        onNavigate("runs");
-      }
+      setSuccessMessage("任务创建成功，已加入任务中心。");
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setCreateErrorMessage(getErrorMessage(error));
+      setSuccessMessage("");
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  function handleSelectTask(taskId: string): boolean {
+    const matched = tasks.find((item) => item.id === taskId) || null;
+    setSelectedTask(matched);
+    return Boolean(matched);
+  }
+
   return (
     <section className="page-section tasks-layout">
-      <PageHeader eyebrow={meta.eyebrow} title={meta.title} description={meta.description} />
-      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+      <section className="task-command-bar">
+        <div className="task-command-bar__copy">
+          <strong>{meta.title}</strong>
+          <p>{meta.description}</p>
+        </div>
+        <div className="task-command-bar__actions">
+          <button className="btn btn--primary" type="button" onClick={handleOpenCreateModal}>
+            新建任务
+          </button>
+        </div>
+      </section>
+      {successMessage ? <div className="task-success-banner">{successMessage}</div> : null}
+      {pageErrorMessage ? <div className="error-banner">{pageErrorMessage}</div> : null}
       <MetricStrip items={buildTaskMetrics(tasks, profiles, selectedTask)} />
       <div className="tasks-console-grid">
-        <div className="tasks-console-grid__composer">
-          <TaskComposer
-            profiles={profiles}
-            prompt={prompt}
-            envProfileId={envProfileId}
-            modelOverrides={modelOverrides}
-            isSubmitting={isSubmitting}
-            onPromptChange={setPrompt}
-            onEnvProfileChange={setEnvProfileId}
-            onModelOverridesChange={setModelOverrides}
-            onNavigateProfiles={() => onNavigate("profiles")}
-            onSubmit={() => void handleSubmit()}
+        <div ref={queueSectionRef} className="tasks-console-grid__queue">
+          <TaskActionInbox
+            tasks={tasks}
+            selectedTaskId={selectedTask?.id || ""}
+            onSelectTask={handleSelectTask}
+            onAfterSelect={() => {
+              queueSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
           />
-        </div>
-        <div className="tasks-console-grid__queue">
           <TaskQueue
             tasks={tasks}
             selectedTaskId={selectedTask?.id || ""}
             isRefreshing={isRefreshing}
-            onSelect={(taskId) => setSelectedTask(tasks.find((item) => item.id === taskId) || null)}
-            onNavigateRuns={() => onNavigate("runs")}
+            onSelect={(taskId) => {
+              handleSelectTask(taskId);
+            }}
+            onNavigateRuns={(context) => onNavigate("runs", context)}
           />
         </div>
         <div className="tasks-console-grid__inspector">
           <TaskInspector
             task={selectedTask}
-            onNavigateRuns={() => onNavigate("runs")}
+            onNavigateRuns={(context) => onNavigate("runs", context)}
+            onNavigateArtifacts={(context) => onNavigate("artifacts", context)}
+            onNavigateCapabilities={() => onNavigate("capabilities")}
             onRefresh={async () => {
-              await refresh(selectedTask?.id);
+              await refresh({ preferredTaskId: selectedTask?.id, errorScope: "page" });
             }}
           />
         </div>
       </div>
+      <TaskQuickCreateModal
+        open={isCreateModalOpen}
+        profiles={profiles}
+        prompt={prompt}
+        envProfileId={envProfileId}
+        modelOverrides={modelOverrides}
+        isSubmitting={isSubmitting}
+        errorMessage={createErrorMessage}
+        successMessage={successMessage}
+        onPromptChange={setPrompt}
+        onEnvProfileChange={setEnvProfileId}
+        onModelOverridesChange={setModelOverrides}
+        onClose={() => setIsCreateModalOpen(false)}
+        onNavigateProfiles={() => {
+          setIsCreateModalOpen(false);
+          onNavigate("profiles");
+        }}
+        onSubmit={() => void handleSubmitCreateTask()}
+      />
     </section>
   );
 }

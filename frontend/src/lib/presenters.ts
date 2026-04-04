@@ -12,6 +12,20 @@ export type MetricItem = {
   tone: Tone;
 };
 
+type TaskLike = {
+  id: string;
+  status: string;
+  created_at?: string;
+};
+
+export type TaskActionBucket = {
+  key: "waiting_input" | "waiting_approval" | "running" | "failed";
+  label: string;
+  description: string;
+  count: number;
+  firstTaskId: string;
+};
+
 const numberFormatter = new Intl.NumberFormat("zh-CN");
 
 function formatCount(value: number): string {
@@ -44,6 +58,97 @@ export function getPhaseLabel(phase: string): string {
     REPORTING: "报告生成"
   };
   return mapping[phase] || phase || "未进入阶段";
+}
+
+export function getTaskPriority(status: string): number {
+  const mapping: Record<string, number> = {
+    WAITING_USER_INPUT: 1,
+    FAILED: 2,
+    WAITING_APPROVAL: 3,
+    RUNNING: 4,
+    CREATED: 5,
+    PARTIAL_SUCCESS: 6,
+    COMPLETED: 7
+  };
+  return mapping[status] || 99;
+}
+
+function compareTaskByPriorityAndCreatedAt(a: TaskLike, b: TaskLike): number {
+  const priorityGap = getTaskPriority(a.status) - getTaskPriority(b.status);
+  if (priorityGap !== 0) {
+    return priorityGap;
+  }
+  const aTime = Date.parse(a.created_at || "");
+  const bTime = Date.parse(b.created_at || "");
+  const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+  const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+  if (safeATime !== safeBTime) {
+    return safeBTime - safeATime;
+  }
+  return a.id.localeCompare(b.id);
+}
+
+export function pickPreferredTask<T extends TaskLike>(
+  tasks: T[],
+  preferredTaskId?: string,
+  currentSelectedTaskId?: string
+): T | null {
+  if (tasks.length === 0) {
+    return null;
+  }
+  if (preferredTaskId) {
+    const preferred = tasks.find((item) => item.id === preferredTaskId);
+    if (preferred) {
+      return preferred;
+    }
+  }
+  if (currentSelectedTaskId) {
+    const current = tasks.find((item) => item.id === currentSelectedTaskId);
+    if (current) {
+      return current;
+    }
+  }
+  return [...tasks].sort(compareTaskByPriorityAndCreatedAt)[0] || null;
+}
+
+export function buildTaskActionBuckets(tasks: TaskLike[]): TaskActionBucket[] {
+  const definitions: Array<Pick<TaskActionBucket, "key" | "label" | "description"> & { statuses: string[] }> = [
+    {
+      key: "waiting_input",
+      label: "待补充信息",
+      description: "需要先补全关键信息，任务才能继续推进。",
+      statuses: ["WAITING_USER_INPUT"]
+    },
+    {
+      key: "waiting_approval",
+      label: "待能力审批",
+      description: "需要先完成能力审批，再进入后续执行。",
+      statuses: ["WAITING_APPROVAL"]
+    },
+    {
+      key: "running",
+      label: "执行中任务",
+      description: "可进入执行页查看实时推进。",
+      statuses: ["RUNNING"]
+    },
+    {
+      key: "failed",
+      label: "异常任务",
+      description: "建议优先排查失败原因并重新发起。",
+      statuses: ["FAILED"]
+    }
+  ];
+
+  return definitions.map((definition) => {
+    const matched = tasks.filter((task) => definition.statuses.includes(task.status)).sort(compareTaskByPriorityAndCreatedAt);
+    return {
+      key: definition.key,
+      label: definition.label,
+      description: definition.description,
+      count: matched.length,
+      firstTaskId: matched[0]?.id || ""
+    };
+  });
 }
 
 export function getSubtaskStatusMeta(status: string): StatusMeta {
@@ -87,7 +192,7 @@ export function buildTaskMetrics(
     {
       label: "任务总数",
       value: formatCount(tasks.length),
-      detail: "当前已进入控制台的任务",
+      detail: "当前任务中心中的全部任务",
       tone: "info"
     },
     {
@@ -99,7 +204,7 @@ export function buildTaskMetrics(
     {
       label: "活跃任务",
       value: formatCount(runningCount),
-      detail: selectedTask?.current_phase ? `当前阶段：${getPhaseLabel(selectedTask.current_phase)}` : "查看执行链路推进状态",
+      detail: selectedTask?.current_phase ? `当前阶段：${getPhaseLabel(selectedTask.current_phase)}` : "查看执行流程推进状态",
       tone: runningCount > 0 ? "info" : "neutral"
     },
     {
@@ -130,7 +235,7 @@ export function buildRunMetrics(
     {
       label: "执行中",
       value: formatCount(runningCount),
-      detail: "仍在推进中的执行链路",
+      detail: "仍在推进中的执行流程",
       tone: runningCount > 0 ? "info" : "neutral"
     },
     {
@@ -175,7 +280,7 @@ export function buildCapabilityMetrics(items: Array<{ risk_score: number; status
     {
       label: "已通过",
       value: formatCount(approved),
-      detail: "已允许进入执行链路",
+      detail: "已允许进入执行流程",
       tone: approved > 0 ? "success" : "neutral"
     }
   ];

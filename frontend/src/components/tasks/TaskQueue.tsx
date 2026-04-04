@@ -18,21 +18,21 @@ type Props = {
   selectedTaskId: string;
   isRefreshing: boolean;
   onSelect: (taskId: string) => void;
-  onNavigateRuns: () => void;
+  onNavigateRuns: (context: { taskId?: string; runId?: string }) => void;
 };
 
 export function TaskQueue({ tasks, selectedTaskId, isRefreshing, onSelect, onNavigateRuns }: Props) {
   return (
     <PanelFrame
       title="任务队列"
-      description="优先查看当前阶段、环境与子任务规模，决定是否需要进一步进入监控。"
+      description="按状态查看任务推进情况，并快速进入执行页面。"
       actions={<span className="pill-note">{isRefreshing ? "同步中" : `${tasks.length} 条任务`}</span>}
     >
       {tasks.length === 0 ? (
         <EmptyState
-          title="还没有任务进入执行链路"
-          description="创建一个新任务后，这里会显示状态、阶段与下一步动作。"
-          aside="从左侧创建器开始"
+          title="还没有任务进入执行流程"
+          description="新建任务后，这里会展示状态、阶段与下一步动作。"
+          aside="从上方新建任务开始"
         />
       ) : (
         <div className="task-queue">
@@ -57,8 +57,14 @@ export function TaskQueue({ tasks, selectedTaskId, isRefreshing, onSelect, onNav
                     <button className="btn btn--secondary" type="button" onClick={() => onSelect(item.id)}>
                       查看详情
                     </button>
-                    <button className="btn btn--ghost" type="button" onClick={onNavigateRuns}>
-                      前往监控
+                    <button
+                      className="btn btn--ghost"
+                      disabled={!item.run?.id}
+                      title={item.run?.id ? "" : "当前任务尚未生成可查看的执行记录"}
+                      type="button"
+                      onClick={() => onNavigateRuns({ taskId: item.id, runId: item.run?.id || "" })}
+                    >
+                      查看执行
                     </button>
                   </div>
                 </div>
