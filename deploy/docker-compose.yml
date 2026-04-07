@@ -18,7 +18,7 @@ services:
   api:
     build:
       context: ../backend
-      dockerfile ../deploy/docker/api.Dockerfile
+      dockerfile: ../deploy/docker/api.Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/propagate
       LLM_PROVIDER: ${LLM_PROVIDER:-demo}
