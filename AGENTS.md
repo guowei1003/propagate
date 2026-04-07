@@ -2,215 +2,166 @@
 
 ## Project Overview
 
-Propagate is a low-dependency AI task execution system with a built-in web UI. It implements a controlled agent orchestration workflow where AI agents execute tasks through a structured pipeline rather than free-form interactions.
+Propagate is a low-dependency AI task execution system with a built-in web UI. AI agents execute tasks through a structured pipeline: create task → AI generates script → Docker sandbox execution → view results.
 
 ### Key Features
 
-- **Requirement Analysis**: Parse user prompts into structured requirements with clarification rounds
-- **Task Decomposition**: Break down tasks into subtasks with dependency handling (DAG)
-- **Parallel Execution**: Background worker executes independent subtasks concurrently
-- **Review/Test Loop**: Every subtask goes through code review and testing before completion
-- **Real-time Events**: SSE-based event streaming for live task progress
-- **Final Reports**: Automatic generation of execution reports and artifact persistence
+- **Task CRUD**: Create, list, inspect, delete tasks via REST API
+- **Docker Sandbox**: Subtasks execute in isolated containers (`--network none`)
+- **LLM Integration**: Demo mode (mock) / OpenAI / Ollama
+- **SSE Event Stream**: Real-time task progress in the browser
+- **Environment Profiles**: Configurable LLM environments per task
+- **React SPA**: Modern dark-theme UI with hash-based routing
 
 ## Technology Stack
 
 | Component | Technology |
 |-----------|------------|
 | Backend | FastAPI |
-| Database | SQLite |
-| Frontend | Jinja2 + HTMX + SSE |
-| Background Worker | Thread-based pool executor |
+| Database | PostgreSQL |
+| Frontend | React + Vite + TypeScript |
+| Runtime | Docker containers |
+| Deployment | Docker Compose |
 
 ## Project Structure
 
 ```
 propagate/
-├── app/
-│   ├── main.py              # FastAPI application entry point
-│   ├── config.py            # Configuration and settings
-│   ├── db.py                # SQLite database connection
-│   ├── enums.py             # Task and subtask status constants
-│   ├── domain/
-│   │   └── models.py        # Data transfer objects (DTOs)
-│   ├── api/routes/          # HTTP endpoints
-│   │   ├── tasks.py         # Task CRUD APIs
-│   │   ├── events.py        # SSE event streaming
-│   │   ├── pages.py         # HTML page routes
-│   │   └── env_profiles.py  # Environment profile APIs
-│   ├── orchestrator/
-│   │   └── task_orchestrator.py  # Core state machine
-│   ├── agents/              # AI agent implementations
-│   │   ├── requirement_analyzer.py
-│   │   ├── task_decomposer.py
-│   │   ├── task_evaluator.py
-│   │   ├── executor.py
-│   │   ├── code_review.py
-│   │   ├── tester.py
-│   │   └── reporter.py
-│   ├── workers/
-│   │   └── engine.py        # Background worker engine
-│   ├── repositories/        # Data access layer
-│   ├── services/            # Cross-cutting services
-│   │   ├── llm_service.py   # LLM provider abstraction
-│   │   ├── event_service.py # Event publishing
-│   │   └── artifact_service.py
-│   └── web/
-│       ├── templates/       # Jinja2 HTML templates
-│       └── static/          # CSS and JavaScript
-├── data/
-│   └── artifacts/           # Generated artifacts storage
-├── migrations/
-│   └── 001_initial_schema.sql
-├── docs/
-│   ├── ai-task-execution-blueprint.md
-│   └── backend-module-blueprint.md
-├── scripts/
-│   └── run_api.py           # Application launcher
-└── tests/
+├── backend/
+│   ├── app/
+│   │   ├── main.py          # FastAPI app + lifespan (auto-migrate tables)
+│   │   ├── config.py        # Settings from environment variables
+│   │   ├── db.py            # SQLAlchemy async engine + session
+│   │   ├── models.py        # SQLAlchemy models (Task, TaskLog, TaskResult, Profile)
+│   │   ├── schemas.py       # Pydantic request/response schemas
+│   │   ├── routers/
+│   │   │   ├── tasks.py     # /api/tasks CRUD + /api/tasks/{id}/stream SSE
+│   │   │   ├── profiles.py  # /api/profiles CRUD
+│   │   │   └── events.py    # In-memory SSE subscriber registry
+│   │   └── services/
+│   │       ├── task_service.py  # Business logic
+│   │       ├── worker.py       # Docker sandbox executor (async polling)
+│   │       └── llm.py          # LLM abstraction (demo / openai / ollama)
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── run.py               # Dev entry point
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx          # Root component + hash router
+│   │   ├── main.tsx         # Entry point with ToastProvider
+│   │   ├── theme.ts         # Theme system (light / dark / system)
+│   │   ├── presenters.ts    # Data formatting helpers
+│   │   ├── components/
+│   │   │   ├── Layout.tsx        # Sidebar + topbar
+│   │   │   ├── TaskList.tsx      # Card list + filter + search
+│   │   │   ├── TaskDetail.tsx    # Tabbed: overview / logs / result
+│   │   │   ├── TaskCreate.tsx    # Modal form
+│   │   │   ├── ProfilesPage.tsx  # Environment config CRUD
+│   │   │   ├── MetricStrip.tsx   # KPI cards
+│   │   │   ├── StatusBadge.tsx
+│   │   │   ├── ThemeToggle.tsx
+│   │   │   ├── ToastViewport.tsx
+│   │   │   └── notifications/
+│   │   │       └── ToastProvider.tsx
+│   │   ├── lib/
+│   │   │   ├── api.ts       # fetch wrapper
+│   │   │   └── toast.ts     # Toast context types
+│   │   └── styles/          # CSS (tokens, base, layout, components, pages)
+│   ├── index.html
+│   ├── vite.config.ts       # Proxy /api to backend:8000
+│   └── Dockerfile           # Node build + nginx serving
+├── deploy/
+│   ├── docker-compose.yml          # Production (postgres + api + frontend)
+│   ├── docker-compose.dev.yml      # Development (source mount + hot reload)
+│   ├── docker/
+│   │   ├── api.Dockerfile
+│   │   ├── frontend.Dockerfile     # Node → nginx
+│   │   ├── runner.Dockerfile       # Minimal sandbox container
+│   │   └── nginx.conf              # SPA + /api/ proxy
+│   ├── scripts/
+│   │   ├── init_db.sh      # DB init + migration
+│   │   ├── build.sh        # Build all 3 images
+│   │   ├── deploy.sh       # deploy [dev|production]
+│   │   ├── restart.sh      # restart [service-name]
+│   │   └── clean.sh        # Remove containers + volumes
+│   └── .env.example
+└── README.md
 ```
 
 ## Build and Run
 
-### Install Dependencies
+### Docker Compose (Production)
 
 ```bash
-python3 -m pip install -e .
+./deploy/scripts/build.sh
+./deploy/scripts/deploy.sh production
+# Frontend: http://localhost
+# API:      http://localhost:8000
+# Docs:     http://localhost:8000/docs
 ```
 
-### Start the Application
+### Docker Compose (Development)
 
 ```bash
-python3 scripts/run_api.py
+./deploy/scripts/deploy.sh dev
+# Frontend dev: http://localhost:3000
+# API:          http://localhost:8000
 ```
 
-### Access the UI
-
-Open http://127.0.0.1:8000/tasks in your browser.
-
-### Run Tests
+### Local Development
 
 ```bash
-python3 -m pytest
+# Backend
+cd backend
+pip install -r requirements.txt
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/propagate
+python3 run.py
+
+# Frontend
+cd frontend
+npm install
+npm run dev
 ```
-
-## Configuration
-
-Configuration is loaded from environment variables. Copy `.env.example` to `.env` and customize:
-
-```bash
-cp .env.example .env
-```
-
-### Key Settings
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LLM_PROVIDER_TYPE` | `demo` or `openai_compatible` | `demo` |
-| `LLM_API_BASE_URL` | API endpoint for OpenAI-compatible providers | - |
-| `LLM_API_KEY` | API key | - |
-| `LLM_DEFAULT_MODEL` | Default model name | `gpt-4o-mini` |
-| `MAX_WORKER_CONCURRENCY` | Max parallel subtask executions | `3` |
-| `WORKER_POLL_INTERVAL_SEC` | Worker polling interval | `1.0` |
-
-### LLM Provider Modes
-
-1. **Demo Mode** (`LLM_PROVIDER_TYPE=demo`): Returns mock responses, no external API calls
-2. **OpenAI Compatible** (`LLM_PROVIDER_TYPE=openai_compatible`): Connects to OpenAI, Azure OpenAI, Ollama, or any OpenAI-compatible API
-
-## Core Workflows
-
-### Task Lifecycle
-
-```
-CREATED → REQUIREMENT_ANALYZING → [WAITING_USER_INPUT] → TASK_DECOMPOSING → 
-TASK_EVALUATING → SUBTASK_RUNNING → REPORTING → COMPLETED/PARTIAL_SUCCESS/FAILED
-```
-
-### Subtask Lifecycle
-
-```
-PENDING → READY → RUNNING → [RETRY_PENDING] → COMPLETED
-                     ↓
-              NEEDS_HUMAN_REVIEW (when max retries exceeded)
-```
-
-### Execution Loop
-
-Each subtask follows this pattern:
-
-```
-Executor Agent → Code Review → Test Agent
-                     ↓              ↓
-                  RETRY          RETRY
-                     ↓              ↓
-               NEEDS_HUMAN_REVIEW (on failure)
-```
-
-## Agent System
-
-| Agent | Purpose | Input | Output |
-|-------|---------|-------|--------|
-| Requirement Analyzer | Parse prompt, find ambiguities | Raw prompt, answers | Structured requirement, questions |
-| Task Decomposer | Create subtasks | Structured requirement | Subtask list with dependencies |
-| Task Evaluator | Assign execution strategy | Subtask content | Agent template, skills, timeout |
-| Executor | Execute subtask | Task context | Code/artifacts |
-| Code Review | Quality check | Execution output | Pass/fail with issues |
-| Test Agent | Validate execution | Code, test commands | Test results |
-| Reporter | Generate final report | All task data | Markdown report |
-
-## Architecture Principles
-
-1. **Orchestration-First**: All state changes flow through `TaskOrchestrator`
-2. **State-Driven**: Every critical step has persistent state for recovery
-3. **Review-Required**: All outputs must pass review and test gates
-4. **Human Fallback**: Unclear requirements or repeated failures trigger human intervention
-5. **Minimal Dependencies**: No external workflow engines, message queues, or object stores
 
 ## API Endpoints
 
-### Task APIs
+### Tasks
 
-- `POST /api/tasks` - Create new task
-- `GET /api/tasks` - List tasks (paginated)
-- `GET /api/tasks/{task_id}` - Get task details
-- `POST /api/tasks/{task_id}/clarifications/{round_id}/answer` - Submit clarification answers
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/tasks` | List tasks (filter by `status`) |
+| `POST` | `/api/tasks` | Create a task |
+| `GET` | `/api/tasks/{id}` | Get task detail |
+| `DELETE` | `/api/tasks/{id}` | Delete a task |
+| `GET` | `/api/tasks/{id}/stream` | SSE event stream |
+| `GET` | `/api/tasks/{id}/events` | Historical event list |
 
-### Event APIs
+### Profiles
 
-- `GET /api/tasks/{task_id}/events` - Get event history
-- `GET /api/tasks/{task_id}/stream` - SSE event stream
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/profiles` | List profiles |
+| `POST` | `/api/profiles` | Create profile |
+| `GET` | `/api/profiles/{id}` | Get profile |
+| `PUT` | `/api/profiles/{id}` | Update profile |
+| `DELETE` | `/api/profiles/{id}` | Delete profile |
 
-### Environment Profiles
+## LLM Providers
 
-- `GET /api/env-profiles` - List profiles
-- `POST /api/env-profiles` - Create profile
-- `PUT /api/env-profiles/{id}` - Update profile
+- `demo` (default): Mock responses based on prompt content
+- `openai`: Set `LLM_PROVIDER=openai` + `LLM_API_KEY`
+- `ollama`: Set `LLM_PROVIDER=ollama` + `LLM_API_BASE=http://localhost:11434/v1`
 
-## Database Schema
+## Configuration
 
-The system uses SQLite with the following core tables:
+Copy `deploy/.env.example` → `.env` and configure:
 
-- `tasks` - Main task records
-- `task_requirements` - Structured requirements (versioned)
-- `clarification_rounds` - Q&A rounds for requirement clarification
-- `sub_tasks` - Decomposed subtasks
-- `sub_task_dependencies` - DAG edges between subtasks
-- `agent_runs` - Agent execution logs
-- `task_events` - Event log for SSE streaming
-- `artifacts` - Generated file metadata
-- `task_reports` - Final reports
-- `env_profiles` - LLM and environment configuration
-
-## Development Notes
-
-- The current agent implementation is deterministic and local-first (demo mode)
-- `llm_service.py` abstracts LLM calls for easy provider switching
-- All agent outputs must be structured; schema validation is enforced
-- Worker uses `ThreadPoolExecutor` for concurrent subtask execution
-- SSE streaming polls the database for new events
-
-## Further Reading
-
-- `docs/ai-task-execution-blueprint.md` - Full system design document
-- `docs/backend-module-blueprint.md` - Backend module design details
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `postgresql://...` | PostgreSQL connection string |
+| `LLM_PROVIDER` | `demo` | `demo` / `openai` / `ollama` |
+| `LLM_API_BASE` | - | API base URL for OpenAI-compatible |
+| `LLM_API_KEY` | - | API key |
+| `LLM_MODEL` | `gpt-4o-mini` | Model name |
+| `WORKER_CONCURRENCY` | `3` | Max parallel executions |
+| `RUNNER_IMAGE` | `propagate-runner:latest` | Sandbox container image |

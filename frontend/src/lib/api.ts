@@ -83,3 +83,7 @@ export async function putJson<T>(url: string, payload: unknown): Promise<T> {
     body: JSON.stringify(payload)
   });
 }
+
+export async function deleteJson<T>(url: string): Promise<T> {
+  return requestJson<T>(url, { method: "DELETE" });
+}

@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: propagate
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - propagate-dev
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: ../deploy/docker/api.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/propagate
+      LLM_PROVIDER: demo
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - propagate-dev
+    command: python -c "
+import uvicorn
+uvicorn.run('app.main:app', host='0.0.0.0', port=8000, reload=True)
+"
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    networks:
+      - propagate-dev
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  propagate-dev:
+    driver: bridge

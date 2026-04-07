@@ -1,19 +1,27 @@
-import type { MetricItem } from "../lib/presenters";
+import type { ReactNode } from "react";
+import type { MetricItem } from "../presenters";
+import type { Tone } from "../presenters";
 
 type Props = {
   items: MetricItem[];
 };
 
+function MetricCard({ item }: { item: MetricItem }) {
+  return (
+    <div className={`metric-card metric-card--${item.tone}`}>
+      <span className="metric-card__label">{item.label}</span>
+      <strong className="metric-card__value">{item.value}</strong>
+      <span className="metric-card__detail">{item.detail}</span>
+    </div>
+  );
+}
+
 export function MetricStrip({ items }: Props) {
   return (
-    <section className="metric-strip" aria-label="关键指标">
-      {items.map((item) => (
-        <article key={item.label} className={`metric-card metric-card--${item.tone}`}>
-          <span className="metric-card__label">{item.label}</span>
-          <strong className="metric-card__value">{item.value}</strong>
-          <span className="metric-card__detail">{item.detail}</span>
-        </article>
+    <div className="metric-strip">
+      {items.map((item, i) => (
+        <MetricCard key={i} item={item} />
       ))}
-    </section>
+    </div>
   );
 }

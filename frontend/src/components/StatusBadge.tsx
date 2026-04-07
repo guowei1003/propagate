@@ -1,4 +1,4 @@
-import type { Tone } from "../lib/presenters";
+import type { Tone } from "../presenters";
 
 type Props = {
   label: string;
