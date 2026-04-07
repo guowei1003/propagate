@@ -40,6 +40,5 @@ fi
 
 echo ""
 echo "=== Deployment complete ==="
-echo "  Frontend: http://localhost"
-echo "  API:      http://localhost:8000"
-echo "  Docs:     http://localhost:8000/docs"
+echo "  Frontend: http://<your-server-ip>:8888"
+echo "  API:      http://<your-server-ip>:8888/api  (internal: 8001)"
