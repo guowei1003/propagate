@@ -2,24 +2,15 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-DB_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/propagate}"
-DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5432}"
-DB_USER="${DB_USER:-postgres}"
-DB_PASS="${DB_PASS:-postgres}"
-DB_NAME="${DB_NAME:-propagate}"
 
 echo "=== Propagate Database Init ==="
-echo "Host: $DB_HOST:$DB_PORT"
 
 wait_for_postgres() {
     local max_attempts=30
     local attempt=1
     echo "Waiting for postgres to be ready..."
     while [ $attempt -le $max_attempts ]; do
-        if PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c '\q' 2>/dev/null; then
+        if docker compose exec -T postgres pg_isready -U postgres -d propagate > /dev/null 2>&1; then
             echo "Postgres is ready."
             return 0
         fi
@@ -33,14 +24,8 @@ wait_for_postgres() {
 
 wait_for_postgres
 
-# Create database if not exists
-PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c \
-    "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" 2>/dev/null | grep -q 1 || \
-    PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c \
-    "CREATE DATABASE $DB_NAME"
-
 echo "Running migrations..."
-PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<-'EOF'
+docker compose exec -T postgres psql -U postgres -d propagate <<-'EOF'
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS tasks (

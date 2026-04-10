@@ -4,30 +4,40 @@ services:
     environment:
       POSTGRES_DB: propagate
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
+      - /data/propagate/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d propagate"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
-      - propagate-dev
+      - propagate-net
 
   api:
     build:
-      context: ../backend
-      dockerfile: ../deploy/docker/api.Dockerfile
+      context: ${ROOT_DIR:-.}/backend
+      dockerfile: ${ROOT_DIR:-.}/deploy/docker/api.Dockerfile
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/propagate
-      LLM_PROVIDER: demo
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/propagate
+      LLM_PROVIDER: ${LLM_PROVIDER:-demo}
+      LLM_API_BASE: ${LLM_API_BASE:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+      DOCKER_NETWORK: propagate-net
+      RUNNER_IMAGE: ${RUNNER_IMAGE:-propagate-runner:latest}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
-      - ../backend:/app
+      - ${ROOT_DIR:-.}/backend:/app
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - propagate-dev
+      - propagate-net
     command: python -c "
 import uvicorn
 uvicorn.run('backend.app.main:app', host='0.0.0.0', port=8000, reload=True)
@@ -42,14 +52,11 @@ uvicorn.run('backend.app.main:app', host='0.0.0.0', port=8000, reload=True)
     ports:
       - "3000:3000"
     volumes:
-      - ../frontend:/app
+      - ${ROOT_DIR:-.}/frontend:/app
       - /app/node_modules
     networks:
-      - propagate-dev
-
-volumes:
-  postgres_dev_data:
+      - propagate-net
 
 networks:
-  propagate-dev:
+  propagate-net:
     driver: bridge
