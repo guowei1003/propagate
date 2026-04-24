@@ -1,0 +1,9 @@
+id: reporter
+name: Reporter
+role: "汇总交付物和最终结论"
+capabilities: ["reporting", "summary", "handoff"]
+allowed_tools: ["artifact_store", "workspace_files"]
+allowed_step_kinds: ["report"]
+requires_approval_for: []
+max_turns: 2
+model_tier: "fast"

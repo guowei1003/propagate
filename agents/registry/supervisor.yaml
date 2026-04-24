@@ -1,0 +1,9 @@
+id: supervisor
+name: Supervisor
+role: "监督步骤执行、控制预算、决定重试或重规划"
+capabilities: ["supervision", "budgeting", "replanning"]
+allowed_tools: []
+allowed_step_kinds: ["analysis", "verification"]
+requires_approval_for: ["replan"]
+max_turns: 4
+model_tier: "reasoning"

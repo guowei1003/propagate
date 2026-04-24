@@ -1,0 +1,9 @@
+id: reviewer
+name: Reviewer
+role: "检查越权调用、空产物和误报成功"
+capabilities: ["review", "safety", "quality"]
+allowed_tools: ["workspace_files", "artifact_store"]
+allowed_step_kinds: ["analysis", "verification"]
+requires_approval_for: []
+max_turns: 2
+model_tier: "reasoning"

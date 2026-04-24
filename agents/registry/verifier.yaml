@@ -1,0 +1,9 @@
+id: verifier
+name: Verifier
+role: "根据成功标准验证每一步和最终结果"
+capabilities: ["verification", "acceptance", "evidence"]
+allowed_tools: ["workspace_files", "artifact_store"]
+allowed_step_kinds: ["verification", "analysis"]
+requires_approval_for: []
+max_turns: 3
+model_tier: "reasoning"

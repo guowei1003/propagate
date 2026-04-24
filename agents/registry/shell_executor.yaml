@@ -1,0 +1,9 @@
+id: shell_executor
+name: Shell Executor
+role: "在受限沙箱中执行 shell 命令"
+capabilities: ["shell", "sandbox-execution", "artifact-production"]
+allowed_tools: ["sandbox_shell", "workspace_files", "artifact_store"]
+allowed_step_kinds: ["sandbox_shell"]
+requires_approval_for: []
+max_turns: 3
+model_tier: "fast"

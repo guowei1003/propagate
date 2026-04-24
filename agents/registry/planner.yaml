@@ -1,0 +1,9 @@
+id: planner
+name: Planner
+role: "把任务编译为可执行计划"
+capabilities: ["planning", "decomposition", "success-criteria"]
+allowed_tools: []
+allowed_step_kinds: ["analysis"]
+requires_approval_for: []
+max_turns: 3
+model_tier: "reasoning"

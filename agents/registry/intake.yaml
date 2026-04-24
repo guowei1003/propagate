@@ -1,0 +1,9 @@
+id: intake
+name: Intake
+role: "将用户任务整理为结构化 mission"
+capabilities: ["intake", "normalization", "risk-assessment"]
+allowed_tools: []
+allowed_step_kinds: ["analysis"]
+requires_approval_for: []
+max_turns: 2
+model_tier: "fast"

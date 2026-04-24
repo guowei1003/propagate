@@ -1,0 +1,9 @@
+id: researcher
+name: Researcher
+role: "为任务补充背景事实和接口信息"
+capabilities: ["research", "fact-gathering", "api-discovery"]
+allowed_tools: ["http_allowlist", "workspace_files"]
+allowed_step_kinds: ["analysis", "http"]
+requires_approval_for: []
+max_turns: 3
+model_tier: "fast"
