@@ -1,6 +1,7 @@
 id: api_operator
 name: API Operator
 role: "通过 allowlist API 工具执行 HTTP 操作"
+intro: "按白名单与策略通过 HTTP 与 Git、云服务等外部系统对接；涉及出站副作用时按策略审批。"
 capabilities: ["http", "api-integration", "automation"]
 allowed_tools: ["http_allowlist", "artifact_store"]
 allowed_step_kinds: ["http", "tool_call"]

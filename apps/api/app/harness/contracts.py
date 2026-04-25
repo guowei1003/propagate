@@ -83,6 +83,7 @@ class AgentSpec(BaseModel):
     id: str
     name: str
     role: str
+    intro: str = ""
     capabilities: list[str]
     allowed_tools: list[str] = Field(default_factory=list)
     allowed_step_kinds: list[str] = Field(default_factory=list)

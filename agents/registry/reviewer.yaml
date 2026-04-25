@@ -1,6 +1,7 @@
 id: reviewer
 name: Reviewer
 role: "检查越权调用、空产物和误报成功"
+intro: "从安全与一致性角度复查输出，关注越权工具调用、空产物与误报成功等风险。"
 capabilities: ["review", "safety", "quality"]
 allowed_tools: ["workspace_files", "artifact_store"]
 allowed_step_kinds: ["analysis", "verification"]

@@ -1,6 +1,7 @@
 id: python_executor
 name: Python Executor
 role: "在受限沙箱中执行 Python 脚本"
+intro: "在隔离沙箱中运行 Python 脚本，完成分析、转换与产物生成，适合计算类步骤。"
 capabilities: ["python", "sandbox-execution", "artifact-production"]
 allowed_tools: ["sandbox_python", "workspace_files", "artifact_store"]
 allowed_step_kinds: ["sandbox_python"]

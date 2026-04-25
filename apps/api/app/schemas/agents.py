@@ -7,6 +7,7 @@ class AgentSpecResponse(BaseModel):
     id: str
     name: str
     role: str
+    intro: str
     capabilities: list[str]
     allowed_tools: list[str]
     allowed_step_kinds: list[str]

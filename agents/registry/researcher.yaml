@@ -1,6 +1,7 @@
 id: researcher
 name: Researcher
 role: "为任务补充背景事实和接口信息"
+intro: "检索代码、文档与已授权外部来源，为规划与执行补充可引用的事实与接口信息。"
 capabilities: ["research", "fact-gathering", "api-discovery"]
 allowed_tools: ["http_allowlist", "workspace_files"]
 allowed_step_kinds: ["analysis", "http"]

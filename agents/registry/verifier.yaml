@@ -1,6 +1,7 @@
 id: verifier
 name: Verifier
 role: "根据成功标准验证每一步和最终结果"
+intro: "依据成功标准与证据验证步骤与最终产物，为审批点与放行提供明确依据。"
 capabilities: ["verification", "acceptance", "evidence"]
 allowed_tools: ["workspace_files", "artifact_store"]
 allowed_step_kinds: ["verification", "analysis"]

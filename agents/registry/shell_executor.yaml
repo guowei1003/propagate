@@ -1,6 +1,7 @@
 id: shell_executor
 name: Shell Executor
 role: "在受限沙箱中执行 shell 命令"
+intro: "在受限沙箱中执行 shell 与构建类命令，用于批处理、构建与本地工具链调用。"
 capabilities: ["shell", "sandbox-execution", "artifact-production"]
 allowed_tools: ["sandbox_shell", "workspace_files", "artifact_store"]
 allowed_step_kinds: ["sandbox_shell"]

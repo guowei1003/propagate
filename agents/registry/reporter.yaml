@@ -1,6 +1,7 @@
 id: reporter
 name: Reporter
 role: "汇总交付物和最终结论"
+intro: "汇总多步产出与最终结论，生成可阅读的摘要、清单与面向人的交付物。"
 capabilities: ["reporting", "summary", "handoff"]
 allowed_tools: ["artifact_store", "workspace_files"]
 allowed_step_kinds: ["report"]

@@ -1,3 +1,24 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.com.apple.timemachine.supported
+**/.com.apple.FinderInfo
+**/.com.apple.icloud*
+
+# 本地工具 / 构建产物
+.superpowers/
+/dist/
+
+# Python / Node / 前端
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -5,13 +26,23 @@ __pycache__/
 .mypy_cache/
 .coverage
 htmlcov/
+coverage.xml
+.tox/
+.nox/
 data/
 .env
+.env.local
+.env.*.local
 *.egg-info/
 .venv/
 .worktrees/
 worktrees/
 apps/web/node_modules/
 apps/web/dist/
+apps/web/.vite/
 apps/web/playwright-report/
 apps/web/test-results/
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

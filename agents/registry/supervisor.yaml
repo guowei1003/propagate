@@ -1,6 +1,7 @@
 id: supervisor
 name: Supervisor
 role: "监督步骤执行、控制预算、决定重试或重规划"
+intro: "在运行中监控各步状态与预算，在失败或策略变化时决定重试、重规划或中止。"
 capabilities: ["supervision", "budgeting", "replanning"]
 allowed_tools: []
 allowed_step_kinds: ["analysis", "verification"]
