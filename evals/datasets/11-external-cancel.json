@@ -1,0 +1,1 @@
+{"name":"外部取消","goal":"执行过程中收到 cancel 指令。","expected":"run 状态变为 canceled。"}

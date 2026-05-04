@@ -1,0 +1,1 @@
+{"name":"HTTP allowlist 任务","goal":"调用 allowlist API 并记录响应。","expected":"域名白名单生效。"}

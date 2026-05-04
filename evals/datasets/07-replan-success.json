@@ -1,0 +1,1 @@
+{"name":"重规划后成功","goal":"原步骤失败后触发 replan。","expected":"run 状态进入 needs_replan 或通过 replan 恢复。"}

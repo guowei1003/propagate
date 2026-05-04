@@ -1,75 +1,122 @@
 # Propagate Agent Harness
 
-面向「可约束、可编排、可监督、可恢复、可评估」的多智能体运行底座：Python（FastAPI + LangGraph）控制面、PostgreSQL 持久化、Docker 沙箱执行、React 监督台。
+Propagate 现在是一个面向代码/API 自动化任务的 agent harness。它不是单次 prompt 执行器，而是把任务放进一条完整、可监督的执行链：
 
-## Python 虚拟环境（推荐）
+1. 用户提交任务目标、约束与交付物
+2. `intake` 生成结构化 mission
+3. 系统自动选配所需 agents
+4. `planner` 编译强类型执行计划
+5. `supervisor` 监督步骤执行、重试、replan 与预算
+6. `verifier` 根据成功标准输出验证结果
+7. 控制台展示 mission、plan、timeline、approval 和 artifacts
 
-本仓库要求 **Python 3.12 或 3.13**（勿用 3.14，部分依赖尚未完全支持）。任选其一：
+## 目录
 
-**方式 A：`python -m venv`（需本机已安装 3.12/3.13）**
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -U pip
-pip install -e ".[dev]"
+```text
+apps/api    FastAPI 控制面、运行时、工具与服务层
+apps/web    React 监督台
+agents      内置 agent registry
+deploy      Docker Compose 与 Dockerfiles
+evals       golden task 场景
+docs        架构与评估说明
 ```
 
-**方式 B：用 uv 安装固定 Python 再建 venv**
+## 本地开发
+
+### API
 
 ```bash
-uv python install 3.12
-uv venv --python 3.12 .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-# 或: uv sync（使用 uv 锁文件时）
+uv sync
+PYTHONPATH=apps/api .venv/bin/uvicorn app.main:app --reload
 ```
 
-启动 API 前请先 `source .venv/bin/activate`，或在命令中使用 `.venv/bin/python` / `.venv/bin/uvicorn`。
-
-## 快速开始
+### Web
 
 ```bash
-# Python API（本地 SQLite 默认）
-source .venv/bin/activate
-cd apps/api && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# 前端
-cd apps/web && npm install && npm run dev
+cd apps/web
+npm install
+npm run dev
 ```
 
-## Docker Compose（PostgreSQL + API + Web + Runner 镜像）
+## Docker
+
+生产态：
 
 ```bash
-docker compose -f deploy/docker-compose.yml up --build
+cd deploy
+docker compose up --build
 ```
 
-- API: `http://localhost:8000`（文档 `/docs`）
-- Web: `http://localhost:5173`（开发）或经 Compose 映射的端口
-
-## 环境变量（前缀 `PROPAGATE_`）
-
-| 变量 | 说明 |
-|------|------|
-| `DATABASE_URL` | 默认 SQLite；生产使用 `postgresql+asyncpg://...` |
-| `CHECKPOINT_DATABASE_URL` | LangGraph checkpoint；Postgres 时用 `postgresql://...` |
-| `OPENAI_API_KEY` | OpenAI 时使用 |
-| `DEFAULT_PROVIDER` | `mock`（测试/CI）或 `openai` |
-| `RUNNER_IMAGE` | 沙箱镜像（见 `deploy/docker/runner.Dockerfile`） |
-
-## 文档
-
-- [架构说明](docs/architecture/agent-harness.md)
-- [Golden tasks 评估](docs/evals/golden-tasks.md)
-
-## 风险边界（v1）
-
-- 单租户、无 RBAC；默认沙箱 `--network none`，外网 HTTP 仅经 Profile 白名单工具。
-- 不做浏览器自动化、不做跨任务长期记忆。
-
-## 测试
+或者直接在服务器根目录执行：
 
 ```bash
-uv run pytest apps/api/tests -q
-cd apps/web && npm test
+bash ./dev.sh
 ```
+
+开发态：
+
+```bash
+cd deploy
+docker compose -f docker-compose.dev.yml up --build
+```
+
+## 服务器一键部署
+
+默认会自动使用并创建这些目录：
+
+```bash
+/data/propagate/config
+/data/propagate/postgres
+/data/propagate/app
+```
+
+执行：
+
+```bash
+bash ./dev.sh
+```
+
+脚本会自动完成这些动作：
+
+1. 创建 `/data/propagate/...` 目录
+2. 自动生成 `/data/propagate/config/propagate.env`（首次执行）
+3. 自动 build 最新镜像
+4. 自动执行当前服务器上的 `docker compose up -d`
+5. 自动把数据库目录和应用数据目录挂载进容器
+
+如果你要改目录，可以传参：
+
+```bash
+bash ./dev.sh --base-dir /data/my-propagate
+```
+
+如果你要指定自己的配置文件：
+
+```bash
+bash ./dev.sh --env-file /data/my-propagate/config/prod.env
+```
+
+## 服务器打包脚本
+
+如果你想在服务器上直接执行“编译 + 打包 + 输出到指定目录”，可以使用：
+
+```bash
+bash deploy/scripts/build_release.sh --output-dir /path/to/output
+```
+
+如果希望打包前顺便跑后端和前端测试：
+
+```bash
+bash deploy/scripts/build_release.sh --output-dir /path/to/output --with-tests
+```
+
+脚本会输出两份产物：
+
+1. 解包后的发布目录
+2. 对应的 `.tar.gz` 压缩包
+
+## 当前边界
+
+- v1 是单租户、本地优先控制面
+- 默认提供 mock provider，真实 OpenAI provider 需要配置 `PROPAGATE_OPENAI_API_KEY`
+- Docker runner 已落代码和镜像文件，但当前工作机没有可用的 `docker` 命令，真实沙箱执行需要在具备 Docker 的环境验证

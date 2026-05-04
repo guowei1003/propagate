@@ -1,0 +1,1 @@
+{"name":"纯 Shell 执行任务","goal":"生成并运行 shell 命令，输出日志。","expected":"存在 sandbox_shell step。"}

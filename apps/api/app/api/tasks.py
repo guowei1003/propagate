@@ -35,7 +35,9 @@ async def list_tasks(session: AsyncSession = Depends(get_db_session)):
 @router.post("", response_model=TaskDetailResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(payload: TaskCreateRequest, session: AsyncSession = Depends(get_db_session)):
     task = await task_service.create_task(session, payload)
-    latest_run = task.runs[0]
+    latest_run = await run_service.get_run(session, task.id, task.latest_run_id)
+    if latest_run is None:
+        raise HTTPException(status_code=500, detail="latest run not created")
     await run_service.start_run(session, task, latest_run)
     return TaskDetailResponse(
         id=task.id,
@@ -116,8 +118,35 @@ async def get_run(task_id: UUID, run_id: UUID, session: AsyncSession = Depends(g
             }
             for step in run.steps
         ],
-        approvals=[approval.__dict__ for approval in run.approvals],
-        artifacts=[artifact.__dict__ for artifact in run.artifacts],
+        approvals=[
+            {
+                "id": approval.id,
+                "run_id": approval.run_id,
+                "step_id": approval.step_id,
+                "reason": approval.reason,
+                "status": approval.status,
+                "decision": approval.decision,
+                "comment": approval.comment,
+                "requested_at": approval.requested_at,
+                "resolved_at": approval.resolved_at,
+            }
+            for approval in run.approvals
+        ],
+        artifacts=[
+            {
+                "id": artifact.id,
+                "run_id": artifact.run_id,
+                "step_id": artifact.step_id,
+                "name": artifact.name,
+                "artifact_type": artifact.artifact_type,
+                "mime_type": artifact.mime_type,
+                "storage_path": artifact.storage_path,
+                "sha256": artifact.sha256,
+                "details": artifact.details,
+                "created_at": artifact.created_at,
+            }
+            for artifact in run.artifacts
+        ],
     )
 
 

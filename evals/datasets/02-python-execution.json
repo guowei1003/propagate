@@ -1,0 +1,1 @@
+{"name":"纯 Python 执行任务","goal":"生成并运行 Python 脚本，输出日志。","expected":"存在 sandbox_python step。"}

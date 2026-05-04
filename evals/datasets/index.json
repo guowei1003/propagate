@@ -1,0 +1,14 @@
+[
+  "01-planning-only.json",
+  "02-python-execution.json",
+  "03-shell-execution.json",
+  "04-http-allowlist.json",
+  "05-high-risk-approval.json",
+  "06-retry-success.json",
+  "07-replan-success.json",
+  "08-verifier-rejects.json",
+  "09-reviewer-blocks.json",
+  "10-timeout-stop.json",
+  "11-external-cancel.json",
+  "12-checkpoint-recovery.json"
+]

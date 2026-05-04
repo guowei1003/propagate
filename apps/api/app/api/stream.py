@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.db import get_db_session
+from app.db import SessionLocal, get_db_session
 from app.services.run_service import run_service
 from app.services.stream_service import stream_service
 
@@ -45,7 +45,9 @@ async def stream_run_events(task_id: UUID, run_id: UUID, session: AsyncSession =
     async def event_generator():
         emitted = 0
         while True:
-            events = await stream_service.list_events(session, run.id)
+            async with SessionLocal() as poll_session:
+                latest_run = await run_service.get_run(poll_session, task_id, run_id)
+                events = await stream_service.list_events(poll_session, run.id)
             for event in events[emitted:]:
                 yield {
                     "event": event.name,
@@ -57,7 +59,7 @@ async def stream_run_events(task_id: UUID, run_id: UUID, session: AsyncSession =
                     },
                 }
             emitted = len(events)
-            if run.status in {"completed", "failed", "canceled"} and emitted == len(events):
+            if latest_run and latest_run.status in {"completed", "failed", "canceled"} and emitted == len(events):
                 break
             await asyncio.sleep(0.5)
 

@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: propagate
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+
+  api:
+    image: python:3.12-slim
+    working_dir: /app
+    command: >
+      sh -lc "pip install --no-cache-dir uv &&
+      uv sync &&
+      PYTHONPATH=/app/apps/api .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      PROPAGATE_DATABASE_URL: sqlite+aiosqlite:///./data/propagate.db
+      PROPAGATE_DEFAULT_PROVIDER: mock
+    ports:
+      - "8000:8000"
+    volumes:
+      - ..:/app
+
+  web:
+    image: node:22-alpine
+    working_dir: /app/apps/web
+    command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ..:/app

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +30,7 @@ async def create_profile(payload: ProfileCreateRequest, session: AsyncSession = 
 
 
 @router.put("/{profile_id}", response_model=ProfileResponse)
-async def update_profile(profile_id, payload: ProfileUpdateRequest, session: AsyncSession = Depends(get_db_session)):
+async def update_profile(profile_id: UUID, payload: ProfileUpdateRequest, session: AsyncSession = Depends(get_db_session)):
     profile = await session.get(Profile, profile_id)
     if profile is None:
         raise HTTPException(status_code=404, detail="profile not found")

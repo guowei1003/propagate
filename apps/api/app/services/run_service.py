@@ -33,10 +33,14 @@ def utcnow() -> datetime:
 class RunService:
     def __init__(self) -> None:
         self._mock = MockProvider()
-        self._openai = OpenAIResponsesProvider()
+        self._openai: OpenAIResponsesProvider | None = None
 
     def _provider_for(self, provider_name: str):
-        return self._openai if provider_name == "openai" else self._mock
+        if provider_name == "openai":
+            if self._openai is None:
+                self._openai = OpenAIResponsesProvider()
+            return self._openai
+        return self._mock
 
     async def get_run(self, session: AsyncSession, task_id: UUID, run_id: UUID) -> TaskRun | None:
         result = await session.execute(
@@ -100,6 +104,7 @@ class RunService:
         )
 
         plan = await compile_execution_plan(mission, selected_agents, provider, context)
+        run.selected_agents = [agent.model_dump() for agent in plan.selected_agents]
         run.execution_plan = plan.model_dump()
         run.memory = remember(run.memory, "current_plan", plan.model_dump())
         await stream_service.append_event(
@@ -108,7 +113,10 @@ class RunService:
             category="planner",
             name="plan_compiled",
             message="执行计划已生成",
-            payload={"steps": [step.model_dump() for step in plan.steps]},
+            payload={
+                "steps": [step.model_dump() for step in plan.steps],
+                "selected_agents": run.selected_agents,
+            },
         )
 
         for position, step in enumerate(plan.steps):
@@ -116,7 +124,11 @@ class RunService:
             step_dict["approval_required"] = step_requires_approval(
                 step,
                 mission,
-                profile.model_dump() if profile else None,
+                {
+                    "requires_human_approval_for_high_risk": profile.requires_human_approval_for_high_risk,
+                }
+                if profile
+                else None,
             )
             run_step = RunStep(
                 run_id=run.id,
@@ -170,6 +182,8 @@ class RunService:
                 break
 
             await self._execute_step(session, run, step, mission, provider, context, profile)
+            if step.status != "completed":
+                break
 
         if all(step.status in {"completed", "skipped"} for step in run.steps):
             await self._finalize_run(session, run, mission, provider, context)

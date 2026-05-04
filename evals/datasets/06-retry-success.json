@@ -1,0 +1,1 @@
+{"name":"重试后成功","goal":"第一次失败、第二次成功。","expected":"supervisor 给出 retry 决策。"}
